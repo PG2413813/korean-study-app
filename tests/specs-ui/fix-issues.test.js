@@ -145,6 +145,75 @@ test('复习回车流：答错后再按回车也能进入下一题', () => {
   assert(s.index === 1, '答错后再按回车也应进入下一题');
 });
 
+/* ===== 单词库分页：每页50条 + 页码/相邻页/上一页下一页/跳转 ===== */
+function seedWords(n) {
+  var words = [];
+  for (var i = 0; i < n; i++) {
+    words.push({ id: 'w' + i, ko: '단어' + i, zh: '词' + i, tags: [], createdAt: '2000-01-01', lastReviewedAt: null, isError: false, errorSince: null, correctStreak: 0 });
+  }
+  seedState({ version: 1, settings: { roundSize: 20, removeAfter: 3 }, studyLog: {}, words: words });
+}
+function rowCount() { return $('w-list').querySelectorAll('.row').length; }
+function clickPage(n) { document.querySelector('#w-pager .pg-num[data-pg="' + n + '"]').onclick(); }
+function activePage() { return Number(document.querySelector('#w-pager .pg-num.on').getAttribute('data-pg')); }
+
+test('分页：120词时第1页显示50条，共3页', () => {
+  seedWords(120);
+  AppUI.navigate('words');
+  assert(rowCount() === 50, '第1页应显示50条，实际 ' + rowCount());
+  assert(!!$('w-pager'), '应存在分页栏');
+});
+
+test('分页：点页码跳转，第3页显示剩余20条', () => {
+  seedWords(120);
+  AppUI.navigate('words');
+  clickPage(3);
+  assert(rowCount() === 20, '第3页应显示剩余20条，实际 ' + rowCount());
+  assert(activePage() === 3, '当前高亮应为第3页');
+});
+
+test('分页：第7页显示相邻页 5,6,7,8,9', () => {
+  seedWords(500); // 10页
+  AppUI.navigate('words');
+  // 先用跳转到第7页
+  $('pg-input').value = '7';
+  $('pg-go').onclick();
+  assert(activePage() === 7, '应跳转到第7页');
+  [5, 6, 7, 8, 9].forEach(function (p) {
+    assert(!!document.querySelector('#w-pager .pg-num[data-pg="' + p + '"]'), '第7页应显示相邻页 ' + p);
+  });
+  assert(!!document.querySelector('#w-pager .pg-num[data-pg="1"]') && !!document.querySelector('#w-pager .pg-num[data-pg="10"]'), '应同时显示首页和末页');
+});
+
+test('分页：上一页/下一页按钮翻页', () => {
+  seedWords(120);
+  AppUI.navigate('words');
+  $('pg-next').onclick();
+  assert(activePage() === 2 && rowCount() === 50, '点下一页应到第2页');
+  $('pg-prev').onclick();
+  assert(activePage() === 1, '点上一页应回到第1页');
+});
+
+test('分页：跳转输入框跳转到指定页', () => {
+  seedWords(120);
+  AppUI.navigate('words');
+  $('pg-input').value = '3';
+  $('pg-go').onclick();
+  assert(activePage() === 3 && rowCount() === 20, '跳转第3页应显示20条');
+});
+
+test('分页：搜索/筛选时回到第1页', () => {
+  seedWords(120);
+  AppUI.navigate('words');
+  clickPage(3);
+  assert(activePage() === 3, '先到第3页');
+  // 搜索一个仍有多页结果的词（단어 匹配全部120条），应回到第1页
+  $('w-search').value = '단어';
+  $('w-search').oninput();
+  assert(activePage() === 1, '搜索后应回到第1页，当前为 ' + activePage());
+  assert(rowCount() === 50, '第1页应重新显示50条');
+});
+
 
 
 
