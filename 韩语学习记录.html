@@ -779,7 +779,12 @@ function renderQuestion() {
     '</div></div>';
   var input = $('ans');
   input.focus();
-  input.onkeydown = function (e) { if (e.key === 'Enter') AppUI.submitAnswer(input.value); };
+  input.onkeydown = function (e) {
+    if (e.key !== 'Enter') return;
+    // 未作答：回车=提交；已作答：回车=下一题（无需鼠标点击）
+    if (session.answered) AppUI.nextQuestion();
+    else AppUI.submitAnswer(input.value);
+  };
   $('ans-submit').onclick = function () { AppUI.submitAnswer(input.value); };
   $('ans-next').onclick = function () { AppUI.nextQuestion(); };
 }

@@ -109,6 +109,42 @@ test('问题5 首页三张卡片分别跳转到复习/录入/错题库', () => {
   assert(!$('view-errors').classList.contains('hidden'), '点错题总数应进入错题库页');
 });
 
+/* ===== 问题1(复习)：回车提交答案，再按回车进入下一题 ===== */
+function seedReviewable(n) {
+  var words = [];
+  for (var i = 0; i < n; i++) {
+    words.push({ id: 'w' + i, ko: '단어' + i, zh: '单词' + i, tags: [], createdAt: '2000-01-01', lastReviewedAt: null, isError: false, errorSince: null, correctStreak: 0 });
+  }
+  seedState({ version: 1, settings: { roundSize: 20, removeAfter: 3 }, studyLog: {}, words: words });
+}
+
+test('复习回车流：第一次回车提交答案，第二次回车进入下一题', () => {
+  seedReviewable(3);
+  AppUI.startReview('zh2ko');
+  var s = AppUI._getSession();
+  assert(s.answered === false && s.index === 0, '初始应在第1题未作答');
+  // 第一次回车：提交正确答案
+  $('ans').value = s.queue[0].ko;
+  $('ans').onkeydown({ key: 'Enter' });
+  assert(s.answered === true, '第一次回车后应已作答');
+  assert(!$('ans-next').classList.contains('hidden'), '作答后下一题按钮应显示');
+  assert($('ans-fb').textContent.indexOf('答对') >= 0, '应显示答对反馈');
+  // 第二次回车：直接进入下一题（无需鼠标点击按钮）
+  $('ans').onkeydown({ key: 'Enter' });
+  assert(s.index === 1 && s.answered === false, '第二次回车应进入第2题且重置为未作答');
+});
+
+test('复习回车流：答错后再按回车也能进入下一题', () => {
+  seedReviewable(2);
+  AppUI.startReview('zh2ko');
+  var s = AppUI._getSession();
+  $('ans').value = '틀린답';
+  $('ans').onkeydown({ key: 'Enter' });
+  assert(s.answered === true && s.wrong === 1, '答错应计入 wrong');
+  $('ans').onkeydown({ key: 'Enter' });
+  assert(s.index === 1, '答错后再按回车也应进入下一题');
+});
+
 
 
 
