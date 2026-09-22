@@ -126,6 +126,15 @@
   body[data-theme="dark"] .mode-card.on { background: rgba(60,80,88,.6); }
   .mode-card .mc-big { font-size: 30px; font-weight: 800; background: var(--grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
   .mode-card .mc-sub { font-size: 13px; color: var(--sub); margin-top: 6px; }
+
+  /* 单词库分页栏 */
+  .pager { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
+  .pager .pg-num.on { background: var(--grad); color: #fff; font-weight: 700; }
+  .pager .btn.small.disabled { opacity: .4; cursor: default; }
+  .pager .pg-gap { color: var(--sub); padding: 0 4px; }
+  .pager .pg-info { font-size: 13px; color: var(--sub); }
+  .pager .pg-jump { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--sub); }
+  .pager .pg-jump input { padding: 5px 8px; font-size: 13px; width: 70px; }
 </style>
 </head>
 <body data-theme="green">
@@ -390,6 +399,8 @@ var session = null;
 var pendingDup = null;
 var searchQuery = '';
 var activeTag = '全部';
+var wordsPage = 1;
+var WORDS_PAGE_SIZE = 50;
 
 function $(id) { return document.getElementById(id); }
 function today() { return AppCore.todayKey(); }
@@ -654,7 +665,12 @@ function renderWordsList() {
     if (q && w.ko.indexOf(q) < 0 && w.zh.indexOf(q) < 0) return false;
     return true;
   });
-  var rows = list.length ? list.map(function (w) {
+  var totalPages = Math.max(1, Math.ceil(list.length / WORDS_PAGE_SIZE));
+  if (wordsPage > totalPages) wordsPage = totalPages;
+  if (wordsPage < 1) wordsPage = 1;
+  var start = (wordsPage - 1) * WORDS_PAGE_SIZE;
+  var pageItems = list.slice(start, start + WORDS_PAGE_SIZE);
+  var rows = pageItems.length ? pageItems.map(function (w) {
     var tags = w.tags.map(function (t) { return '<span class="tag">' + escapeHtml(t) + '</span>'; }).join(' ');
     return '<div class="row"><span class="ko">' + escapeHtml(w.ko) + '</span><span class="zh">' + escapeHtml(w.zh) + '</span>' +
       '<span class="meta">' + tags + ' ' + escapeHtml(w.createdAt) + (w.isError ? ' <span class="tag">错题</span>' : '') + '</span>' +
@@ -669,6 +685,43 @@ function renderWordsList() {
   for (var k = 0; k < delBtns.length; k++) {
     delBtns[k].onclick = function () { AppUI.confirmRemove(this.getAttribute('data-del')); };
   }
+  renderWordPager(list.length, totalPages);
+}
+function renderWordPager(totalItems, totalPages) {
+  var box = $('w-pager');
+  if (!box) return;
+  if (totalPages <= 1) { box.innerHTML = ''; return; }
+  function goto(p) {
+    wordsPage = Math.max(1, Math.min(totalPages, p | 0 || 1));
+    renderWordsList();
+  }
+  // 要展示的页码：首页、末页、当前页前后各2页
+  var set = {};
+  function add(n) { if (n >= 1 && n <= totalPages) set[n] = 1; }
+  add(1); add(totalPages);
+  for (var d = -2; d <= 2; d++) add(wordsPage + d);
+  var nums = Object.keys(set).map(Number).sort(function (a, b) { return a - b; });
+  var html = '<div class="pager">';
+  html += '<button class="btn small pg-edge' + (wordsPage <= 1 ? ' disabled' : '') + '" id="pg-prev">‹ 上一页</button>';
+  var prevN = 0;
+  nums.forEach(function (n) {
+    if (n - prevN > 1) html += '<span class="pg-gap">…</span>';
+    html += '<button class="btn small pg-num' + (n === wordsPage ? ' on' : '') + '" data-pg="' + n + '">' + n + '</button>';
+    prevN = n;
+  });
+  html += '<button class="btn small pg-edge' + (wordsPage >= totalPages ? ' disabled' : '') + '" id="pg-next">下一页 ›</button>';
+  html += '<span class="pg-info">共 ' + totalItems + ' 词 / ' + totalPages + ' 页</span>';
+  html += '<span class="pg-jump">跳至 <input id="pg-input" type="number" min="1" max="' + totalPages + '"> 页 <button class="btn small primary" id="pg-go">跳转</button></span>';
+  html += '</div>';
+  box.innerHTML = html;
+  if (wordsPage > 1) $('pg-prev').onclick = function () { goto(wordsPage - 1); };
+  if (wordsPage < totalPages) $('pg-next').onclick = function () { goto(wordsPage + 1); };
+  var nb = box.querySelectorAll('.pg-num');
+  for (var i = 0; i < nb.length; i++) {
+    nb[i].onclick = function () { goto(Number(this.getAttribute('data-pg'))); };
+  }
+  $('pg-go').onclick = function () { goto(parseInt($('pg-input').value, 10)); };
+  $('pg-input').onkeydown = function (e) { if (e.key === 'Enter') goto(parseInt(this.value, 10)); };
 }
 function renderWords() {
   var allTags = [];
@@ -679,12 +732,13 @@ function renderWords() {
     '<h1 class="page-title">单词库（' + state.words.length + '）</h1>' +
     '<div class="toolbar"><input id="w-search" placeholder="搜索韩语或中文" style="flex:1" value="' + escapeHtml(searchQuery) + '"></div>' +
     '<div class="toolbar">' + pills + '</div>' +
-    '<div class="list" id="w-list"></div>';
+    '<div class="list" id="w-list"></div>' +
+    '<div id="w-pager"></div>';
   // 只更新列表，不重建搜索框，保证输入法(IME)组合态与焦点不被打断
-  $('w-search').oninput = function () { searchQuery = this.value; renderWordsList(); };
+  $('w-search').oninput = function () { searchQuery = this.value; wordsPage = 1; renderWordsList(); };
   var tagBtns = document.querySelectorAll('#view-words [data-tag]');
   for (var i = 0; i < tagBtns.length; i++) {
-    tagBtns[i].onclick = function () { activeTag = this.getAttribute('data-tag'); renderWordsList(); };
+    tagBtns[i].onclick = function () { activeTag = this.getAttribute('data-tag'); wordsPage = 1; renderWordsList(); };
   }
   renderWordsList();
 }
@@ -956,7 +1010,7 @@ var AppUI = {
   openEdit: openEdit, confirmRemove: confirmRemove, renderAll: renderAll,
   _getState: function () { return state; }, _getSession: function () { return session; },
   _setOnlyErrors: function (v) { onlyErrors = !!v; },
-  _reset: function () { state = AppCore.loadState(); searchQuery = ''; activeTag = '全部'; navigate('home'); }
+  _reset: function () { state = AppCore.loadState(); searchQuery = ''; activeTag = '全部'; wordsPage = 1; navigate('home'); }
 };
 AppUI.boot();
 /* ==== UI-END ==== */
