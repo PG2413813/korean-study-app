@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>视觉重构预览 · 韩语学习记录</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: system-ui, -apple-system, "Malgun Gothic", "Microsoft YaHei", sans-serif;
+    color: #3a2f45; overflow: hidden;
+  }
+  /* ===== 背景层：用户选定的图片 + 柔化遮罩 ===== */
+  .bg {
+    position: fixed; inset: 0; z-index: 0;
+    background: url('backdrop.jpg') center/cover no-repeat;
+  }
+  .bg::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,214,232,.45), rgba(184,167,255,.35));
+  }
+
+  .app { position: relative; z-index: 1; display: flex; height: 100vh; padding: 18px; gap: 18px; }
+
+  /* ===== 侧栏：深色液态玻璃 ===== */
+  .sidebar {
+    width: 200px; flex-shrink: 0; border-radius: 24px; padding: 22px 14px;
+    background: rgba(46, 32, 66, .42);
+    backdrop-filter: blur(28px) saturate(160%);
+    -webkit-backdrop-filter: blur(28px) saturate(160%);
+    border: 1px solid rgba(255,255,255,.22);
+    box-shadow: 0 12px 40px rgba(60,30,90,.25);
+    color: #fff; display: flex; flex-direction: column;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; padding: 4px 8px 20px; }
+  .logo .dot { width: 26px; height: 26px; border-radius: 9px; background: linear-gradient(135deg,#ff9ec7,#a78bfa); box-shadow: 0 0 18px rgba(255,158,199,.8); }
+  .nav { display: flex; flex-direction: column; gap: 6px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 14px; font-size: 14.5px; color: rgba(255,255,255,.82); cursor: pointer; transition: .2s; }
+  .nav-item:hover { background: rgba(255,255,255,.12); }
+  .nav-item.on { background: linear-gradient(135deg, rgba(255,158,199,.55), rgba(167,139,250,.55)); color: #fff; font-weight: 600; box-shadow: 0 6px 20px rgba(255,158,199,.35); }
+  .nav-item .ic { width: 18px; text-align: center; }
+  .side-foot { margin-top: auto; font-size: 11.5px; color: rgba(255,255,255,.55); padding: 10px 8px 0; line-height: 1.6; }
+
+  /* ===== 主区 ===== */
+  .main { flex: 1; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+  .topbar {
+    border-radius: 20px; padding: 16px 24px;
+    background: rgba(255,255,255,.45);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255,255,255,.65);
+    box-shadow: 0 8px 28px rgba(120,80,160,.14);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .greet { font-size: 19px; font-weight: 700; color: #5b3a6e; }
+  .greet small { display: block; font-size: 12.5px; font-weight: 400; color: #9b7fb0; margin-top: 3px; }
+  .date-pill { font-size: 13px; color: #7a5c92; background: rgba(255,255,255,.55); padding: 8px 16px; border-radius: 999px; }
+
+  /* ===== 统计卡 ===== */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .stat {
+    border-radius: 22px; padding: 20px 22px; position: relative; cursor: pointer;
+    background: rgba(255,255,255,.55);
+    backdrop-filter: blur(26px) saturate(190%);
+    -webkit-backdrop-filter: blur(26px) saturate(190%);
+    border: 1px solid rgba(255,255,255,.7);
+    box-shadow: 0 10px 30px rgba(120,80,160,.16);
+    transition: transform .2s, box-shadow .2s;
+  }
+  .stat:hover { transform: translateY(-3px); box-shadow: 0 16px 38px rgba(255,140,190,.28); }
+  .stat .lbl { font-size: 13.5px; color: #9b7fb0; }
+  .stat .num { font-size: 46px; font-weight: 800; color: #6a3d85; line-height: 1.1; margin-top: 6px;
+    background: linear-gradient(135deg,#ff6fa5,#9d6ff0); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .stat .arrow { position: absolute; right: 18px; top: 18px; width: 26px; height: 26px; border-radius: 50%;
+    background: rgba(255,255,255,.7); display: flex; align-items: center; justify-content: center; color: #b07; font-size: 13px; }
+
+  /* ===== 快捷录入 ===== */
+  .quick {
+    border-radius: 20px; padding: 14px 16px; display: flex; gap: 10px; align-items: center;
+    background: rgba(255,255,255,.5);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255,255,255,.7);
+    box-shadow: 0 8px 24px rgba(120,80,160,.13);
+  }
+  .quick input { flex: 1; border: 0; outline: 0; background: rgba(255,255,255,.65); border-radius: 12px; padding: 11px 14px; font-size: 15px; color: #4a3557; }
+  .quick input::placeholder { color: #b79cc9; }
+  .btn-pink { border: 0; cursor: pointer; padding: 11px 22px; border-radius: 12px; font-size: 14.5px; font-weight: 600; color: #fff;
+    background: linear-gradient(135deg,#ff8fb8,#b18cff); box-shadow: 0 6px 18px rgba(255,143,184,.45); transition: .2s; }
+  .btn-pink:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(255,143,184,.55); }
+
+  /* ===== 小卡区 ===== */
+  .lower { display: grid; grid-template-columns: 300px 1fr; gap: 16px; flex: 1; min-height: 0; }
+  .photocard {
+    border-radius: 22px; padding: 16px;
+    background: rgba(255,255,255,.5);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255,255,255,.7);
+    box-shadow: 0 8px 26px rgba(120,80,160,.14);
+  }
+  .section-title { font-size: 14px; font-weight: 700; color: #7a4a92; margin-bottom: 12px; }
+  .polaroid {
+    background: #fff; border-radius: 14px; padding: 10px 10px 14px; transform: rotate(-2deg);
+    box-shadow: 0 10px 24px rgba(150,90,180,.28); width: 210px; margin: 4px auto;
+  }
+  .polaroid img { width: 190px; height: 230px; object-fit: cover; border-radius: 8px; display: block; }
+  .polaroid .cap { text-align: center; font-size: 12.5px; color: #8a6aa5; margin-top: 8px; font-weight: 600; }
+
+  .cardshelf {
+    border-radius: 22px; padding: 18px 20px;
+    background: rgba(255,255,255,.42);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255,255,255,.65);
+    box-shadow: 0 8px 26px rgba(120,80,160,.13);
+    display: flex; flex-direction: column;
+  }
+  .minis { display: flex; gap: 14px; flex-wrap: wrap; }
+  .mini {
+    width: 96px; border-radius: 12px; overflow: hidden; background: #fff; padding: 6px 6px 8px;
+    box-shadow: 0 6px 16px rgba(150,90,180,.22); transform: rotate(var(--r,0deg)); transition: .2s; cursor: pointer;
+  }
+  .mini:hover { transform: rotate(0deg) translateY(-4px); }
+  .mini img { width: 84px; height: 104px; object-fit: cover; border-radius: 7px; display: block; }
+  .mini .cap { text-align: center; font-size: 10.5px; color: #9b7fb0; margin-top: 4px; }
+  .mini.ph { display: flex; align-items: center; justify-content: center; color: #c9aede; font-size: 11px; min-height: 130px; border: 2px dashed #d9bfe8; background: rgba(255,255,255,.4); }
+  .foot { font-size: 13px; color: #7a5c92; margin-top: 14px; }
+  .foot b { color: #e0559b; font-size: 16px; }
+</style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="logo"><span class="dot"></span>韩语学习记录</div>
+      <nav class="nav">
+        <div class="nav-item on"><span class="ic">🏠</span>首页总览</div>
+        <div class="nav-item"><span class="ic">📚</span>单词库</div>
+        <div class="nav-item"><span class="ic">✏️</span>每日学习录入</div>
+        <div class="nav-item"><span class="ic">🎯</span>单词复习</div>
+        <div class="nav-item"><span class="ic">⭐</span>错题库管理</div>
+        <div class="nav-item"><span class="ic">⚙️</span>数据与设置</div>
+      </nav>
+      <div class="side-foot">매일 조금씩<br>꾸준히 해요 ✦ 每天一点点</div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div class="greet">안녕하세요, 今天也要加油学习 ✦
+          <small>今日待复习 23 个单词，开始吧～</small>
+        </div>
+        <div class="date-pill">2026-09-22 · 星期二</div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="arrow">›</div><div class="lbl">今日待复习</div><div class="num">23</div></div>
+        <div class="stat"><div class="arrow">›</div><div class="lbl">今日新录入</div><div class="num">5</div></div>
+        <div class="stat"><div class="arrow">›</div><div class="lbl">错题总数</div><div class="num">7</div></div>
+      </div>
+
+      <div class="quick">
+        <input placeholder="韩语单词，如 공부하다">
+        <input placeholder="中文释义，如 学习">
+        <button class="btn-pink">添加并继续</button>
+      </div>
+
+      <div class="lower">
+        <div class="photocard">
+          <div class="section-title">✦ 今日小卡</div>
+          <div class="polaroid">
+            <img src="card1.jpg" alt="today">
+            <div class="cap">오늘의 아이돌</div>
+          </div>
+        </div>
+        <div class="cardshelf">
+          <div class="section-title">✦ 我的收藏小卡</div>
+          <div class="minis">
+            <div class="mini" style="--r:-3deg"><img src="card1.jpg"><div class="cap">彩英</div></div>
+            <div class="mini" style="--r:2deg"><img src="card2.jpg"><div class="cap">Lily</div></div>
+            <div class="mini ph">+ 放进你的照片</div>
+            <div class="mini ph">+ 放进你的照片</div>
+          </div>
+          <div class="foot">累计单词：<b>128</b>　连续学习：<b>14</b> 天　꾸준히! 💜</div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

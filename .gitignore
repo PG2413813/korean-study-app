@@ -1,0 +1,21 @@
+# 依赖
+node_modules/
+
+# 日志
+*.log
+npm-debug.log*
+
+# 系统与编辑器垃圾
+Thumbs.db
+Desktop.ini
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# 用户私人图片（本地保留，不上传到公开仓库）
+backgrounds/*.jpg
+backgrounds/*.jpeg
+backgrounds/*.png
+backgrounds/*.gif
+backgrounds/*.webp

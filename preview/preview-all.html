@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>全页面预览 · 淡绿主题</title>
+<style>
+  :root{
+    --accent:#3fae7e; --accent2:#7fd6ab;
+    --grad:linear-gradient(135deg,#6fd6a4,#33a878);
+    --ink:#24463a; --sub:#6f9384;
+    --glass:rgba(255,255,255,.55);
+    --glass2:rgba(255,255,255,.45);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:system-ui,-apple-system,"Malgun Gothic","Microsoft YaHei",sans-serif;color:var(--ink);overflow:hidden}
+  .bg{position:fixed;inset:0;z-index:0;background:url('bg-green.jpg') center/cover no-repeat}
+  .bg::after{content:"";position:absolute;inset:0;background:linear-gradient(135deg,rgba(215,246,228,.55),rgba(185,232,208,.4))}
+  .app{position:relative;z-index:1;display:flex;height:100vh;padding:18px;gap:18px}
+
+  .sidebar{width:200px;flex-shrink:0;border-radius:24px;padding:22px 14px;background:rgba(22,58,44,.42);
+    backdrop-filter:blur(28px) saturate(160%);-webkit-backdrop-filter:blur(28px) saturate(160%);
+    border:1px solid rgba(255,255,255,.22);box-shadow:0 12px 40px rgba(20,70,50,.25);color:#fff;display:flex;flex-direction:column}
+  .logo{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:700;padding:4px 8px 20px}
+  .logo .dot{width:26px;height:26px;border-radius:9px;background:var(--grad);box-shadow:0 0 18px rgba(111,214,164,.8)}
+  .nav{display:flex;flex-direction:column;gap:6px}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:14px;font-size:14.5px;color:rgba(255,255,255,.82);cursor:pointer}
+  .nav-item.on{background:linear-gradient(135deg,rgba(111,214,164,.6),rgba(63,168,120,.6));color:#fff;font-weight:600;box-shadow:0 6px 20px rgba(111,214,164,.35)}
+  .side-foot{margin-top:auto;font-size:11.5px;color:rgba(255,255,255,.55);padding:10px 8px 0;line-height:1.6}
+
+  .main{flex:1;display:flex;flex-direction:column;gap:16px;min-width:0;overflow:auto}
+  .view{display:none;flex-direction:column;gap:16px;flex:1}
+  .view.on{display:flex}
+
+  .topbar{border-radius:20px;padding:16px 24px;background:var(--glass2);backdrop-filter:blur(24px) saturate(180%);
+    -webkit-backdrop-filter:blur(24px) saturate(180%);border:1px solid rgba(255,255,255,.65);box-shadow:0 8px 28px rgba(40,110,80,.14);
+    display:flex;align-items:center;justify-content:space-between}
+  .greet{font-size:19px;font-weight:700;color:#1f5c43}
+  .greet small{display:block;font-size:12.5px;font-weight:400;color:var(--sub);margin-top:3px}
+  .date-pill{font-size:13px;color:#2f6b50;background:rgba(255,255,255,.55);padding:8px 16px;border-radius:999px}
+
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .stat{border-radius:22px;padding:20px 22px;position:relative;cursor:pointer;background:var(--glass);
+    backdrop-filter:blur(26px) saturate(190%);-webkit-backdrop-filter:blur(26px) saturate(190%);
+    border:1px solid rgba(255,255,255,.7);box-shadow:0 10px 30px rgba(40,110,80,.16);transition:.2s}
+  .stat:hover{transform:translateY(-3px);box-shadow:0 16px 38px rgba(60,190,130,.28)}
+  .stat .lbl{font-size:13.5px;color:var(--sub)}
+  .stat .num{font-size:46px;font-weight:800;line-height:1.1;margin-top:6px;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .stat .arrow{position:absolute;right:18px;top:18px;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;color:#2f8b62;font-size:14px}
+
+  .quick{border-radius:20px;padding:14px 16px;display:flex;gap:10px;align-items:center;background:var(--glass);
+    backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);
+    border:1px solid rgba(255,255,255,.7);box-shadow:0 8px 24px rgba(40,110,80,.13)}
+  .quick input{flex:1;border:0;outline:0;background:rgba(255,255,255,.65);border-radius:12px;padding:11px 14px;font-size:15px;color:var(--ink)}
+  .quick input::placeholder{color:#9cc2b1}
+  .btn{border:0;cursor:pointer;padding:11px 22px;border-radius:12px;font-size:14.5px;font-weight:600;color:#fff;background:var(--grad);box-shadow:0 6px 18px rgba(60,190,130,.4);transition:.2s}
+  .btn:hover{transform:translateY(-1px)}
+  .btn.ghost{background:rgba(255,255,255,.65);color:#2f6b50;box-shadow:none}
+  .btn.sm{padding:5px 12px;font-size:12.5px;border-radius:9px}
+
+  .lower{display:grid;grid-template-columns:300px 1fr;gap:16px;flex:1;min-height:0}
+  .panel{border-radius:22px;padding:18px 20px;background:var(--glass);backdrop-filter:blur(24px) saturate(180%);
+    -webkit-backdrop-filter:blur(24px) saturate(180%);border:1px solid rgba(255,255,255,.7);box-shadow:0 8px 26px rgba(40,110,80,.13)}
+  .section-title{font-size:14px;font-weight:700;color:#2f7a57;margin-bottom:12px}
+  .polaroid{background:#fff;border-radius:14px;padding:10px 10px 14px;transform:rotate(-2deg);box-shadow:0 10px 24px rgba(50,140,100,.28);width:210px;margin:4px auto}
+  .polaroid img{width:190px;height:230px;object-fit:cover;border-radius:8px;display:block}
+  .polaroid .cap{text-align:center;font-size:12.5px;color:#5a8a72;margin-top:8px;font-weight:600}
+  .minis{display:flex;gap:14px;flex-wrap:wrap}
+  .mini{width:96px;border-radius:12px;overflow:hidden;background:#fff;padding:6px 6px 8px;box-shadow:0 6px 16px rgba(50,140,100,.22);transform:rotate(var(--r,0deg))}
+  .mini img{width:84px;height:104px;object-fit:cover;border-radius:7px;display:block}
+  .mini .cap{text-align:center;font-size:10.5px;color:#6f9384;margin-top:4px}
+  .foot{font-size:13px;color:#3f6b58;margin-top:14px}.foot b{color:#1f9c6a;font-size:16px}
+
+  /* list pages */
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .toolbar input{flex:1;border:0;outline:0;background:rgba(255,255,255,.65);border-radius:12px;padding:11px 14px;font-size:15px;color:var(--ink)}
+  .pill{border:1px solid rgba(255,255,255,.7);background:rgba(255,255,255,.5);color:#3f6b58;border-radius:999px;padding:6px 14px;font-size:12.5px;cursor:pointer}
+  .pill.on{background:var(--grad);color:#fff;border-color:transparent}
+  .list{border-radius:18px;overflow:hidden;background:rgba(255,255,255,.45);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.6)}
+  .row{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.5);font-size:15px}
+  .row:last-child{border-bottom:0}
+  .row .ko{font-weight:700;min-width:120px}
+  .row .zh{flex:1;color:#3f6b58}
+  .tag{font-size:11px;border:1px solid #bfe3d0;border-radius:99px;padding:2px 9px;color:#3f8a66;background:rgba(255,255,255,.6)}
+  .meta{font-size:12px;color:#7fa392}
+  .bar{width:70px;height:7px;border-radius:99px;background:rgba(0,0,0,.08);overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--grad)}
+
+  /* review */
+  .qcard{border-radius:26px;padding:40px;text-align:center;background:var(--glass);backdrop-filter:blur(26px);
+    -webkit-backdrop-filter:blur(26px);border:1px solid rgba(255,255,255,.7);box-shadow:0 12px 34px rgba(40,110,80,.16)}
+  .qmode{font-size:13px;color:var(--sub);letter-spacing:2px}
+  .qprompt{font-size:54px;font-weight:800;color:#1f5c43;margin:14px 0}
+  .qhint{font-size:13px;color:var(--sub);margin-bottom:18px}
+  .qinput{display:flex;gap:10px;justify-content:center}
+  .qinput input{width:320px;border:0;outline:0;border-radius:12px;padding:13px 16px;font-size:17px;text-align:center;background:rgba(255,255,255,.7)}
+  .fb{margin-top:16px;border-radius:12px;padding:12px 16px;font-size:14px}
+  .fb.ok{background:#dff5e8;color:#1f6b43}.fb.no{background:#fbe6df;color:#9a4326}
+  .progress{font-size:13px;color:var(--sub);text-align:center}
+
+  /* settings */
+  .rowset{display:flex;align-items:center;gap:12px;font-size:15px;margin:10px 0}
+  .rowset input{width:90px;border:0;outline:0;border-radius:10px;padding:9px 12px;font-size:15px;background:rgba(255,255,255,.7)}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo"><span class="dot"></span>韩语学习记录</div>
+    <nav class="nav" id="nav">
+      <div class="nav-item" data-p="home">🏠 首页总览</div>
+      <div class="nav-item" data-p="words">📚 单词库</div>
+      <div class="nav-item" data-p="add">✏️ 每日学习录入</div>
+      <div class="nav-item" data-p="review">🎯 单词复习</div>
+      <div class="nav-item" data-p="errors">⭐ 错题库管理</div>
+      <div class="nav-item" data-p="settings">⚙️ 数据与设置</div>
+    </nav>
+    <div class="side-foot">매일 조금씩<br>꾸준히 해요 ✦ 每天一点点</div>
+  </aside>
+
+  <main class="main">
+    <!-- 1 首页 -->
+    <section class="view" id="v-home">
+      <div class="topbar"><div class="greet">안녕하세요, 今天也要加油学习 ✦<small>今日待复习 23 个单词，开始吧～</small></div><div class="date-pill">2026-09-22 · 星期二</div></div>
+      <div class="stats">
+        <div class="stat"><div class="arrow">›</div><div class="lbl">今日待复习</div><div class="num">23</div></div>
+        <div class="stat"><div class="arrow">›</div><div class="lbl">今日新录入</div><div class="num">5</div></div>
+        <div class="stat"><div class="arrow">›</div><div class="lbl">错题总数</div><div class="num">7</div></div>
+      </div>
+      <div class="quick"><input placeholder="韩语单词，如 공부하다"><input placeholder="中文释义，如 学习"><button class="btn">添加并继续</button></div>
+      <div class="lower">
+        <div class="panel"><div class="section-title">✦ 今日小卡</div>
+          <div class="polaroid"><img src="card1.jpg"><div class="cap">오늘의 아이돌</div></div>
+        </div>
+        <div class="panel"><div class="section-title">✦ 我的收藏小卡</div>
+          <div class="minis">
+            <div class="mini" style="--r:-3deg"><img src="card1.jpg"><div class="cap">彩英</div></div>
+            <div class="mini" style="--r:2deg"><img src="card2.jpg"><div class="cap">Lily</div></div>
+            <div class="mini" style="--r:-1deg"><img src="card1.jpg"><div class="cap">留真</div></div>
+            <div class="mini" style="--r:3deg"><img src="card2.jpg"><div class="cap">礼志</div></div>
+          </div>
+          <div class="foot">累计单词：<b>128</b>　连续学习：<b>14</b> 天　꾸준히! 💚</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 单词库 -->
+    <section class="view" id="v-words">
+      <div class="topbar"><div class="greet">📚 单词库<small>共 128 个单词</small></div></div>
+      <div class="panel toolbar"><input placeholder="搜索韩语或中文…"><button class="btn">🔍 搜索</button></div>
+      <div class="toolbar">
+        <span class="pill on">全部</span><span class="pill">TOPIK 2</span><span class="pill">动词</span><span class="pill">名词</span><span class="pill">形容词</span>
+      </div>
+      <div class="list">
+        <div class="row"><span class="ko">공부하다</span><span class="zh">学习</span><span class="tag">动词</span><span class="meta">2026-09-20</span><span><button class="btn sm ghost">编辑</button> <button class="btn sm ghost">删除</button></span></div>
+        <div class="row"><span class="ko">사과</span><span class="zh">苹果</span><span class="tag">名词</span><span class="meta">2026-09-19</span><span><button class="btn sm ghost">编辑</button> <button class="btn sm ghost">删除</button></span></div>
+        <div class="row"><span class="ko">친구</span><span class="zh">朋友</span><span class="tag">名词</span><span class="meta">2026-09-18</span><span><button class="btn sm ghost">编辑</button> <button class="btn sm ghost">删除</button></span></div>
+        <div class="row"><span class="ko">예쁘다</span><span class="zh">漂亮</span><span class="tag">形容词</span><span class="tag">TOPIK2</span><span class="meta">2026-09-17</span><span><button class="btn sm ghost">编辑</button> <button class="btn sm ghost">删除</button></span></div>
+        <div class="row"><span class="ko">시간</span><span class="zh">时间</span><span class="tag">名词</span><span class="meta">2026-09-16</span><span><button class="btn sm ghost">编辑</button> <button class="btn sm ghost">删除</button></span></div>
+      </div>
+    </section>
+
+    <!-- 3 每日录入 -->
+    <section class="view" id="v-add">
+      <div class="topbar"><div class="greet">✏️ 每日学习录入<small>输入完按回车即可，无需鼠标</small></div></div>
+      <div class="panel toolbar"><input placeholder="韩语单词"><input placeholder="中文释义"><input placeholder="标签（可选）" style="flex:1"><button class="btn">添加并继续</button></div>
+      <div class="section-title">✦ 今日已录（5）</div>
+      <div class="list">
+        <div class="row"><span class="ko">오늘</span><span class="zh">今天</span><span class="tag">副词</span><span><button class="btn sm ghost">删除</button></span></div>
+        <div class="row"><span class="ko">내일</span><span class="zh">明天</span><span class="tag">名词</span><span><button class="btn sm ghost">删除</button></span></div>
+        <div class="row"><span class="ko">어제</span><span class="zh">昨天</span><span class="tag">名词</span><span><button class="btn sm ghost">删除</button></span></div>
+      </div>
+    </section>
+
+    <!-- 4 复习 -->
+    <section class="view" id="v-review">
+      <div class="progress">复习 3 / 20　·　给韩语写中文</div>
+      <div class="qcard">
+        <div class="qmode">KO → ZH</div>
+        <div class="qprompt">공부하다</div>
+        <div class="qhint">输入它的中文释义，回车提交</div>
+        <div class="qinput"><input placeholder="你的答案…"><button class="btn">提交</button></div>
+        <div class="fb ok">✓ 答对了！</div>
+      </div>
+    </section>
+
+    <!-- 5 错题库 -->
+    <section class="view" id="v-errors">
+      <div class="topbar"><div class="greet">⭐ 错题库管理<small>共 7 个错题，连续答对 3 次自动移出</small></div></div>
+      <div class="toolbar"><span class="pill on">全部错题</span><span class="pill">只刷错题复习</span></div>
+      <div class="list">
+        <div class="row"><span class="ko">헷갈리다</span><span class="zh">混淆；弄错</span><span class="bar"><i style="width:66%"></i></span><span class="meta">2 / 3</span><span><button class="btn sm ghost">编辑</button> <button class="btn sm ghost">移除</button></span></div>
+        <div class="row"><span class="ko">적다</span><span class="zh">少；写</span><span class="bar"><i style="width:33%"></i></span><span class="meta">1 / 3</span><span><button class="btn sm ghost">编辑</button> <button class="btn sm ghost">移除</button></span></div>
+        <div class="row"><span class="ko">늘다</span><span class="zh">增加；增长</span><span class="bar"><i style="width:0%"></i></span><span class="meta">0 / 3</span><span><button class="btn sm ghost">编辑</button> <button class="btn sm ghost">移除</button></span></div>
+      </div>
+    </section>
+
+    <!-- 6 设置 -->
+    <section class="view" id="v-settings">
+      <div class="topbar"><div class="greet">⚙️ 数据与设置<small>数据只保存在本机，建议定期备份</small></div></div>
+      <div class="panel">
+        <div class="section-title">✦ 备份与恢复</div>
+        <div class="toolbar"><button class="btn">⬇ 导出备份文件</button><button class="btn ghost">⬆ 导入恢复文件</button></div>
+      </div>
+      <div class="panel">
+        <div class="section-title">✦ 偏好设置</div>
+        <div class="rowset">每轮题量 <input value="20"> 题</div>
+        <div class="rowset">连续答对移出 <input value="3"> 次</div>
+        <div class="rowset">主题色
+          <span class="pill on">淡绿</span><span class="pill">淡蓝</span><span class="pill">浅色</span><span class="pill">深色</span>
+        </div>
+        <div class="toolbar" style="margin-top:8px"><button class="btn">保存设置</button><button class="btn ghost">恢复默认</button></div>
+      </div>
+    </section>
+  </main>
+</div>
+<script>
+  var p = new URLSearchParams(location.search).get('page') || 'home';
+  document.querySelectorAll('#nav .nav-item').forEach(function(n){
+    n.classList.toggle('on', n.getAttribute('data-p') === p);
+  });
+  var v = document.getElementById('v-' + p);
+  if (v) v.classList.add('on');
+</script>
+</body>
+</html>

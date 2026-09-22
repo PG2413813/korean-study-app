@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>韩语学习记录</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Malgun Gothic", "Microsoft YaHei", sans-serif;
+    font-size: 16px; background: #f5f8f7; color: var(--ink); min-height: 100vh;
+  }
+  /* ===== 四主题 CSS 变量 ===== */
+  body[data-theme="green"]  { --accent:#3fae7e; --accent2:#7fd6ab; --grad:linear-gradient(135deg,#6fd6a4,#33a878); --ink:#24463a; --sub:#6f9384; --sidebar-bg:rgba(22,58,44,.45); --shadow:rgba(40,110,80,.16); }
+  body[data-theme="blue"]   { --accent:#3d8fd0; --accent2:#8ecbf0; --grad:linear-gradient(135deg,#7cc4f0,#3d8fd0); --ink:#243c52; --sub:#6f8aa3; --sidebar-bg:rgba(24,52,76,.45); --shadow:rgba(40,80,120,.16); }
+  body[data-theme="light"]  { --accent:#4a6b8a; --accent2:#9fb4c6; --grad:linear-gradient(135deg,#6d8aa6,#3f5a75); --ink:#2b3a4a; --sub:#6b7d8d; --sidebar-bg:#2f3f4f; --shadow:rgba(40,50,60,.12); }
+  body[data-theme="dark"]   { --accent:#6fd6a4; --accent2:#9be0c4; --grad:linear-gradient(135deg,#56b88f,#2f8a66); --ink:#e6f0ea; --sub:#9fb4aa; --sidebar-bg:rgba(16,24,28,.6); --shadow:rgba(0,0,0,.45); }
+
+  /* 背景层：用户图片 + 柔化渐变 */
+  .bg { position: fixed; inset: 0; z-index: 0; background: linear-gradient(135deg,#d8efe2,#cfe6f5); background-size: cover; background-position: center; }
+  .bg::after { content:""; position:absolute; inset:0; background: linear-gradient(135deg, rgba(255,255,255,.55), rgba(255,255,255,.35)); }
+
+  .app { position: relative; z-index: 1; display: flex; min-height: 100vh; padding: 18px; gap: 18px; }
+  .sidebar { width: 200px; flex-shrink: 0; border-radius: 24px; padding: 22px 14px; color: #fff;
+    background: var(--sidebar-bg); backdrop-filter: blur(28px) saturate(160%); -webkit-backdrop-filter: blur(28px) saturate(160%);
+    border: 1px solid rgba(255,255,255,.22); box-shadow: 0 12px 40px var(--shadow); display: flex; flex-direction: column; }
+  .logo { display:flex; align-items:center; gap:10px; font-size: 17px; font-weight: 700; padding: 4px 8px 20px; }
+  .logo .dot { width: 26px; height: 26px; border-radius: 9px; background: var(--grad); box-shadow: 0 0 18px rgba(255,255,255,.4); }
+  .nav-btn { display: flex; align-items:center; gap:10px; width: 100%; text-align: left; color: rgba(255,255,255,.85); border: 0; border-radius: 14px; padding: 11px 14px; margin: 3px 0; font-size: 14.5px; cursor: pointer; background: transparent; }
+  .nav-btn.on { background: linear-gradient(135deg, rgba(255,255,255,.28), rgba(255,255,255,.12)); color: #fff; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.15); }
+  .main { flex: 1; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-radius: 22px; padding: 16px 22px;
+    background: rgba(255,255,255,.5); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255,255,255,.65); box-shadow: 0 8px 26px var(--shadow); }
+  body[data-theme="dark"] .topbar { background: rgba(36,48,54,.5); border-color: rgba(255,255,255,.12); }
+  .topbar .greet { font-size: 20px; font-weight: 800; }
+  .topbar .greet .kr { background: var(--grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .topbar .gsub { font-size: 13px; color: var(--sub); margin-top: 3px; }
+  .topbar .date { font-size: 13px; color: var(--sub); white-space: nowrap; padding: 8px 14px; border-radius: 999px; background: rgba(255,255,255,.6); }
+  .hidden { display: none !important; }
+  h1.page-title { font-size: 20px; margin-bottom: 14px; }
+  .sub { font-size: 13px; color: var(--sub); margin-bottom: 14px; }
+
+  .cards { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+  .card { flex: 1 1 180px; border-radius: 22px; padding: 20px 22px; position: relative; cursor: pointer;
+    background: rgba(255,255,255,.55); backdrop-filter: blur(26px) saturate(190%); -webkit-backdrop-filter: blur(26px) saturate(190%);
+    border: 1px solid rgba(255,255,255,.7); box-shadow: 0 10px 30px var(--shadow); transition: transform .2s, box-shadow .2s; }
+  body[data-theme="dark"] .card { background: rgba(40,52,58,.55); border-color: rgba(255,255,255,.15); }
+  .card:hover { transform: translateY(-3px); box-shadow: 0 16px 38px var(--shadow); }
+  .card .num { font-size: 46px; font-weight: 800; line-height: 1.1;
+    background: var(--grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .card .lbl { font-size: 13.5px; color: var(--sub); margin-top: 2px; }
+  .card .arrow { position: absolute; right: 18px; top: 18px; width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,.7); display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 14px; }
+
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  input, select, textarea { padding: 9px 12px; border: 1px solid rgba(255,255,255,.6); border-radius: 12px; font-size: 15px; background: rgba(255,255,255,.7); font-family: inherit; color: var(--ink); }
+  input:focus, select:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+  .btn { padding: 9px 16px; border: 0; border-radius: 12px; background: rgba(255,255,255,.7); font-size: 14.5px; cursor: pointer; color: var(--ink); }
+  .btn:hover { background: rgba(255,255,255,.9); }
+  .btn.primary { background: var(--grad); color: #fff; font-weight: 600; box-shadow: 0 6px 18px var(--shadow); }
+  .btn.primary:hover { filter: brightness(1.05); }
+  .btn.danger { background: #c96a4a; color: #fff; }
+  .btn.small { padding: 5px 11px; font-size: 13px; border-radius: 9px; }
+
+  .panel { border-radius: 20px; padding: 16px 18px; background: rgba(255,255,255,.5);
+    backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255,255,255,.65); box-shadow: 0 8px 26px var(--shadow); }
+  body[data-theme="dark"] .panel { background: rgba(36,48,54,.5); border-color: rgba(255,255,255,.12); }
+
+  .list { border-radius: 18px; overflow: hidden; background: rgba(255,255,255,.45); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.6); }
+  body[data-theme="dark"] .list { background: rgba(30,42,48,.45); }
+  .row { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-bottom: 1px solid rgba(127,127,127,.1); font-size: 15px; }
+  .row:last-child { border-bottom: 0; }
+  .row .ko { font-weight: 700; min-width: 110px; }
+  .row .zh { flex: 1; color: var(--sub); }
+  .row .meta { font-size: 13px; color: var(--sub); white-space: nowrap; }
+  .row .ops { white-space: nowrap; }
+  .tag { font-size: 12px; border: 1px solid rgba(127,127,127,.25); border-radius: 99px; padding: 2px 9px; color: var(--sub); background: rgba(255,255,255,.6); cursor: pointer; }
+  .tag.on { background: var(--grad); color: #fff; border-color: transparent; }
+  .pill { border: 1px solid rgba(255,255,255,.6); background: rgba(255,255,255,.5); color: var(--ink); border-radius: 999px; padding: 6px 14px; font-size: 12.5px; cursor: pointer; }
+  .pill.on { background: var(--grad); color: #fff; border-color: transparent; }
+  .empty { padding: 26px; text-align: center; color: var(--sub); font-size: 14px; }
+  .tip { font-size: 13px; color: var(--sub); margin-top: 10px; line-height: 1.6; }
+
+  .q-prompt { font-size: 52px; font-weight: 800; text-align: center; margin: 24px 0 6px; color: var(--ink); }
+  .q-hint { font-size: 13px; color: var(--sub); text-align: center; margin-bottom: 14px; }
+  .q-input { display: flex; gap: 10px; justify-content: center; }
+  .q-input input { width: 320px; font-size: 18px; text-align: center; }
+  /* 复习大卡：撑满居中 */
+  .qstage { flex: 1; display: flex; align-items: stretch; justify-content: center; min-height: 460px; }
+  .qcard { width: 100%; border-radius: 28px; padding: 56px 48px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: rgba(255,255,255,.55); backdrop-filter: blur(28px) saturate(190%); -webkit-backdrop-filter: blur(28px) saturate(190%);
+    border: 1px solid rgba(255,255,255,.7); box-shadow: 0 14px 40px var(--shadow); }
+  body[data-theme="dark"] .qcard { background: rgba(40,52,58,.55); border-color: rgba(255,255,255,.15); }
+  .qcard .qmode { font-size: 13px; letter-spacing: 2px; color: var(--accent); font-weight: 700; margin-bottom: 18px; }
+  .qcard .q-prompt { font-size: 68px; margin: 0 0 10px; }
+  .qcard .q-hint { margin-bottom: 26px; }
+  .qcard .q-input input { width: 380px; font-size: 22px; padding: 12px 16px; }
+  .fb { padding: 10px 13px; border-radius: 12px; font-size: 14px; margin-top: 12px; }
+  .fb.ok { color: #1f6b43; background: #dff5e8; }
+  .fb.no { color: #9a4326; background: #fbe6df; }
+  .center { text-align: center; }
+  .modal-mask { position: fixed; inset: 0; background: rgba(20,40,34,.35); display: flex; align-items: center; justify-content: center; z-index: 50; }
+  .modal { background: #fff; color:#223; border-radius: 16px; padding: 18px; width: 420px; max-width: 92vw; }
+  .modal h3 { font-size: 16px; margin-bottom: 12px; }
+  .modal label { display: block; font-size: 13px; color: #666; margin: 8px 0 3px; }
+  .modal .modal-ops { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+  .switch { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+  .stat-line { font-size: 15px; line-height: 2; }
+  .stat-line b { color: var(--accent); }
+
+  /* 今日小卡 */
+  .home-extra { display: grid; grid-template-columns: 260px 1fr; gap: 16px; }
+  .polaroid { background:#fff; border-radius:14px; padding:10px 10px 14px; transform:rotate(-2deg); box-shadow:0 10px 24px var(--shadow); width:200px; margin:4px auto; }
+  .polaroid img { width:180px; height:220px; object-fit:cover; border-radius:8px; display:block; }
+  .polaroid .cap { text-align:center; font-size:12.5px; color:#5a8a72; margin-top:8px; font-weight:600; }
+  .bar { width:70px; height:7px; border-radius:99px; background:rgba(0,0,0,.08); overflow:hidden; }
+  .bar i { display:block; height:100%; background:var(--grad); }
+  /* 复习模式选择卡 */
+  .mode-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+  .mode-card { position: relative; border-radius: 20px; padding: 24px 18px; text-align: center; cursor: pointer;
+    background: rgba(255,255,255,.5); border: 2px solid rgba(255,255,255,.5); transition: all .2s; }
+  body[data-theme="dark"] .mode-card { background: rgba(40,52,58,.4); border-color: rgba(255,255,255,.1); }
+  .mode-card input { position: absolute; opacity: 0; pointer-events: none; }
+  .mode-card.on { border-color: var(--accent); background: rgba(255,255,255,.85); box-shadow: 0 10px 26px var(--shadow); }
+  body[data-theme="dark"] .mode-card.on { background: rgba(60,80,88,.6); }
+  .mode-card .mc-big { font-size: 30px; font-weight: 800; background: var(--grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .mode-card .mc-sub { font-size: 13px; color: var(--sub); margin-top: 6px; }
+</style>
+</head>
+<body data-theme="green">
+<div class="bg" id="app-bg"></div>
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo"><span class="dot"></span>韩语学习记录</div>
+    <nav id="nav">
+      <button class="nav-btn on" data-view="home">🏠 首页总览</button>
+      <button class="nav-btn" data-view="words">🗂️ 单词库</button>
+      <button class="nav-btn" data-view="add">✏️ 每日学习录入</button>
+      <button class="nav-btn" data-view="review">🔁 单词复习</button>
+      <button class="nav-btn" data-view="errors">⭐ 错题库管理</button>
+      <button class="nav-btn" data-view="settings">⚙️ 数据与设置</button>
+    </nav>
+    <div style="margin-top:auto;padding:14px 8px 4px;font-size:12px;opacity:.75">매일 조금씩<br>꾸준히 해요 ♡ 每天一点点</div>
+  </aside>
+  <main class="main">
+    <header id="app-header" class="topbar"></header>
+    <section id="view-home" class="view"></section>
+    <section id="view-words" class="view hidden"></section>
+    <section id="view-add" class="view hidden"></section>
+    <section id="view-review" class="view hidden"></section>
+    <section id="view-errors" class="view hidden"></section>
+    <section id="view-settings" class="view hidden"></section>
+  </main>
+</div>
+<div id="modal-root"></div>
+<script>
+/* ==== CORE-START ==== */
+'use strict';
+var STORAGE_KEY = 'hanStudyApp.v1';
+
+function todayKey(d) {
+  d = d || new Date();
+  var y = d.getFullYear();
+  var m = String(d.getMonth() + 1).padStart(2, '0');
+  var day = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
+}
+
+function defaultState() {
+  return { version: 1, settings: { roundSize: 20, removeAfter: 3 }, words: [], studyLog: {} };
+}
+
+function normalizeState(s) {
+  var def = defaultState();
+  if (!s || typeof s !== 'object') return def;
+  s.version = 1;
+  s.settings = Object.assign({}, def.settings, s.settings || {});
+  s.settings.roundSize = Math.max(1, Math.min(100, s.settings.roundSize | 0 || 20));
+  s.settings.removeAfter = Math.max(1, Math.min(10, s.settings.removeAfter | 0 || 3));
+  var log = s.studyLog && typeof s.studyLog === 'object' ? s.studyLog : {};
+  s.studyLog = log;
+  s.words = (Array.isArray(s.words) ? s.words : []).map(function (w) {
+    w = w || {};
+    return {
+      id: String(w.id != null ? w.id : ('w' + Math.random().toString(36).slice(2))),
+      ko: String(w.ko || ''),
+      zh: String(w.zh || ''),
+      tags: Array.isArray(w.tags) ? w.tags.map(String).filter(Boolean) : [],
+      createdAt: String(w.createdAt || todayKey()),
+      lastReviewedAt: w.lastReviewedAt ? String(w.lastReviewedAt) : null,
+      isError: !!w.isError,
+      errorSince: w.errorSince ? String(w.errorSince) : null,
+      correctStreak: w.correctStreak | 0
+    };
+  }).filter(function (w) { return w.ko && w.zh; });
+  return s;
+}
+
+function getStorage(storage) {
+  if (storage) return storage;
+  if (typeof window !== 'undefined' && window.localStorage) return window.localStorage;
+  if (typeof localStorage !== 'undefined') return localStorage;
+  return null;
+}
+
+function loadState(storage) {
+  storage = getStorage(storage);
+  var raw = storage ? storage.getItem(STORAGE_KEY) : null;
+  if (!raw) {
+    var fresh = defaultState();
+    if (storage) storage.setItem(STORAGE_KEY, JSON.stringify(fresh));
+    return fresh;
+  }
+  try {
+    return normalizeState(JSON.parse(raw));
+  } catch (e) {
+    var reset = defaultState();
+    if (storage) storage.setItem(STORAGE_KEY, JSON.stringify(reset));
+    return reset;
+  }
+}
+
+function saveState(state, storage) {
+  storage = getStorage(storage);
+  if (storage) storage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function exportJSON(state) {
+  return JSON.stringify({ app: 'han-study', version: 1, exportedAt: todayKey(), data: state }, null, 2);
+}
+
+function importJSON(text) {
+  var parsed;
+  try { parsed = JSON.parse(text); }
+  catch (e) { return { ok: false, error: '文件不是有效的 JSON：' + e.message }; }
+  var data = parsed && (parsed.data || parsed);
+  if (!data || typeof data !== 'object') return { ok: false, error: '备份文件缺少数据内容' };
+  if (!Array.isArray(data.words)) return { ok: false, error: '备份文件缺少 words 数组' };
+  return { ok: true, state: normalizeState(data) };
+}
+
+/* ===== 以下为核心算法（DOMAIN） ===== */
+
+function normalizeText(s) { return String(s == null ? '' : s).trim(); }
+
+function splitMeanings(zh) {
+  return normalizeText(zh).split(/[、；，,/]/).map(function (s) { return s.trim(); }).filter(Boolean);
+}
+
+function judgeAnswer(input, answer, mode) {
+  var inp = normalizeText(input);
+  if (!inp) return false;
+  if (mode === 'zh2ko') return inp === normalizeText(answer);
+  return splitMeanings(answer).indexOf(inp) >= 0;
+}
+
+function consecutiveStudyDays(studyLog, today) {
+  today = today || todayKey();
+  var cur = new Date(today + 'T00:00:00');
+  function has(key) {
+    var r = studyLog[key];
+    return !!(r && ((r.added > 0) || (r.reviewed > 0)));
+  }
+  if (!has(todayKey(cur))) cur.setDate(cur.getDate() - 1);
+  var count = 0;
+  while (has(todayKey(cur))) { count++; cur.setDate(cur.getDate() - 1); }
+  return count;
+}
+
+function computeStats(words, studyLog, today) {
+  today = today || todayKey();
+  var added = (studyLog[today] && studyLog[today].added) || 0;
+  var due = 0, errors = 0;
+  for (var i = 0; i < words.length; i++) {
+    var w = words[i];
+    if (w.isError) errors++;
+    if (!w.isError && w.createdAt < today && (w.lastReviewedAt == null || w.lastReviewedAt < today)) due++;
+  }
+  return { newAdded: added, dueReview: due, errorCount: errors, totalWords: words.length, studyDays: consecutiveStudyDays(studyLog, today) };
+}
+
+function shuffled(arr, rand) {
+  rand = rand || Math.random;
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rand() * (i + 1));
+    var t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
+function buildReviewQueue(words, settings, today, opts) {
+  opts = opts || {};
+  today = today || todayKey();
+  settings = settings || { roundSize: 20, removeAfter: 3 };
+  var size = Math.max(1, settings.roundSize | 0);
+  var rand = opts.rand || Math.random;
+  var errors = words.filter(function (w) { return w.isError; });
+  if (opts.onlyErrors) return shuffled(errors, rand).slice(0, size);
+  var normals = words.filter(function (w) {
+    return !w.isError && w.createdAt < today && (w.lastReviewedAt == null || w.lastReviewedAt < today);
+  });
+  normals.sort(function (a, b) {
+    var ra = a.lastReviewedAt || '', rb = b.lastReviewedAt || '';
+    if (ra < rb) return -1; if (ra > rb) return 1;
+    return (a.createdAt < b.createdAt) ? -1 : (a.createdAt > b.createdAt ? 1 : 0);
+  });
+  if (errors.length >= size) return shuffled(errors, rand).slice(0, size);
+  var picked = normals.slice(0, size - errors.length);
+  var queue = picked.slice();
+  errors.forEach(function (e) {
+    var pos = Math.floor(rand() * (queue.length + 1));
+    queue.splice(pos, 0, e);
+  });
+  return queue;
+}
+
+function applyAnswer(word, correct, today, settings) {
+  today = today || todayKey();
+  settings = settings || { removeAfter: 3 };
+  var w = Object.assign({}, word);
+  if (correct) {
+    if (w.isError) {
+      w.correctStreak = (w.correctStreak | 0) + 1;
+      if (w.correctStreak >= (settings.removeAfter | 0)) {
+        w.isError = false; w.errorSince = null; w.correctStreak = 0;
+      }
+    }
+  } else {
+    w.isError = true; w.errorSince = today; w.correctStreak = 0;
+  }
+  return w;
+}
+
+function addWordEntry(words, ko, zh, tags, today) {
+  today = today || todayKey();
+  ko = normalizeText(ko); zh = normalizeText(zh);
+  tags = (tags || []).map(normalizeText).filter(Boolean);
+  if (!ko || !zh) return { status: 'invalid', words: words };
+  var existing = null;
+  for (var i = 0; i < words.length; i++) {
+    if (normalizeText(words[i].ko) === ko) { existing = words[i]; break; }
+  }
+  if (existing) return { status: 'duplicate', existing: existing, words: words };
+  var next = words.slice();
+  next.push({
+    id: 'w' + Date.now() + '_' + Math.floor(Math.random() * 1e6),
+    ko: ko, zh: zh, tags: tags, createdAt: today,
+    lastReviewedAt: null, isError: false, errorSince: null, correctStreak: 0
+  });
+  return { status: 'added', words: next };
+}
+
+function mergeEntry(existing, zh, tags) {
+  var w = Object.assign({}, existing);
+  var oldM = splitMeanings(w.zh);
+  splitMeanings(zh).forEach(function (m) { if (oldM.indexOf(m) < 0) oldM.push(m); });
+  w.zh = oldM.join('、');
+  var t = {};
+  (w.tags || []).concat(tags || []).forEach(function (x) { x = normalizeText(x); if (x) t[x] = 1; });
+  w.tags = Object.keys(t);
+  return w;
+}
+
+globalThis.AppCore = {
+  STORAGE_KEY: STORAGE_KEY,
+  todayKey: todayKey,
+  defaultState: defaultState,
+  normalizeState: normalizeState,
+  loadState: loadState,
+  saveState: saveState,
+  exportJSON: exportJSON,
+  importJSON: importJSON,
+  normalizeText: normalizeText,
+  splitMeanings: splitMeanings,
+  judgeAnswer: judgeAnswer,
+  consecutiveStudyDays: consecutiveStudyDays,
+  computeStats: computeStats,
+  buildReviewQueue: buildReviewQueue,
+  applyAnswer: applyAnswer,
+  addWordEntry: addWordEntry,
+  mergeEntry: mergeEntry
+};
+/* ==== CORE-END ==== */
+/* ==== UI-START ==== */
+var state = AppCore.loadState();
+var onlyErrors = false;
+var session = null;
+var pendingDup = null;
+var searchQuery = '';
+var activeTag = '全部';
+
+function $(id) { return document.getElementById(id); }
+function today() { return AppCore.todayKey(); }
+function persist() { AppCore.saveState(state); }
+function curTheme() { return (state.settings && state.settings.theme) || 'green'; }
+function applyTheme(t) { document.body.setAttribute('data-theme', t || 'green'); }
+function setTheme(t) {
+  if (!state.settings) state.settings = { roundSize: 20, removeAfter: 3 };
+  state.settings.theme = t;
+  applyTheme(t);
+  persist();
+}
+// 自动扫描 backgrounds/ 下真实存在的图片（支持 bg1.jpg / g1.jpg 两种命名）
+function probeImages(prefixes, maxN, cb) {
+  try {
+    if (typeof Image === 'undefined' || typeof location === 'undefined' || location.protocol !== 'file:') { cb([]); return; }
+  } catch (e) { cb([]); return; }
+  var found = [];
+  var total = prefixes.length * maxN;
+  if (total <= 0) { cb(found); return; }
+  var left = total;
+  function maybe() { if (--left <= 0) cb(found); }
+  for (var n = 1; n <= maxN; n++) {
+    for (var p = 0; p < prefixes.length; p++) {
+      (function (n, p) {
+        var url = 'backgrounds/' + prefixes[p] + n + '.jpg';
+        var img = new Image();
+        img.onload = function () { found.push(url); maybe(); };
+        img.onerror = maybe;
+        img.src = url;
+      })(n, p);
+    }
+  }
+}
+function dayIndex() {
+  var d = new Date();
+  var start = new Date(d.getFullYear(), 0, 0);
+  return Math.floor((d - start) / 86400000);
+}
+function applyDailyBackground() {
+  var el = $('app-bg');
+  if (!el) return;
+  probeImages(['bg', 'g'], 200, function (files) {
+    if (files.length) {
+      el.style.backgroundImage = 'url("' + files[dayIndex() % files.length] + '")';
+    }
+  });
+}
+function applyDailyIdol() {
+  var img = $('home-idol');
+  if (!img) return;
+  probeImages(['idol'], 200, function (files) {
+    if (files.length) {
+      img.src = files[dayIndex() % files.length];
+      img.style.display = '';
+    } else {
+      img.style.display = 'none';
+    }
+  });
+}
+function recAdded(n) {
+  var t = today();
+  if (!state.studyLog[t]) state.studyLog[t] = { added: 0, reviewed: 0 };
+  state.studyLog[t].added += n;
+}
+function recReviewed() {
+  var t = today();
+  if (!state.studyLog[t]) state.studyLog[t] = { added: 0, reviewed: 0 };
+  state.studyLog[t].reviewed += 1;
+}
+function updateWord(id, patch) {
+  state.words = state.words.map(function (w) { return w.id === id ? Object.assign({}, w, patch) : w; });
+}
+function findWord(id) {
+  for (var i = 0; i < state.words.length; i++) if (state.words[i].id === id) return state.words[i];
+  return null;
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+/* ---------- 导航 ---------- */
+var currentView = 'home';
+function navigate(view) {
+  currentView = view;
+  var btns = document.querySelectorAll('#nav .nav-btn');
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].classList.toggle('on', btns[i].getAttribute('data-view') === view);
+  }
+  ['home', 'words', 'add', 'review', 'errors', 'settings'].forEach(function (v) {
+    var el = $('view-' + v);
+    if (el) el.classList.toggle('hidden', v !== view);
+  });
+  renderAll();
+}
+function renderAll() {
+  renderHeader();
+  if (currentView === 'home') renderHome();
+  else if (currentView === 'words') renderWords();
+  else if (currentView === 'add') renderAdd();
+  else if (currentView === 'review') renderReviewSetup();
+  else if (currentView === 'errors') renderErrors();
+  else if (currentView === 'settings') renderSettings();
+}
+
+/* ---------- 顶部问候栏 ---------- */
+function renderHeader() {
+  var el = $('app-header');
+  if (!el) return;
+  var st = AppCore.computeStats(state.words, state.studyLog, today());
+  var h = new Date().getHours();
+  var kr = '안녕하세요';
+  if (h < 6) kr = '잘 지냈나요';
+  else if (h < 12) kr = '좋은 아침이에요';
+  else if (h < 18) kr = '안녕하세요';
+  else kr = '오늘도 수고했어요';
+  var week = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'][new Date().getDay()];
+  el.innerHTML =
+    '<div><div class="greet"><span class="kr">' + kr + '</span>，今天也要加油学习 ✦</div>' +
+    '<div class="gsub">今日待复习 ' + st.dueReview + ' 个单词，开始吧~</div></div>' +
+    '<div class="date">' + today() + ' · ' + week + '</div>';
+}
+
+/* ---------- 弹窗 ---------- */
+function openModal(inner) {
+  var root = $('modal-root');
+  root.innerHTML = '<div class="modal-mask"><div class="modal">' + inner + '</div></div>';
+}
+function closeModal() { $('modal-root').innerHTML = ''; }
+
+/* ---------- 首页 ---------- */
+function statCard(num, label, target) {
+  return '<div class="card" data-nav="' + target + '"><div class="num">' + num + '</div><div class="lbl">' + label + '</div></div>';
+}
+function renderHome() {
+  var st = AppCore.computeStats(state.words, state.studyLog, today());
+  $('view-home').innerHTML =
+    '<div class="cards">' +
+      statCard(st.dueReview, '今日待复习', 'review') +
+      statCard(st.newAdded, '今日新录入', 'add') +
+      statCard(st.errorCount, '错题总数', 'errors') +
+    '</div>' +
+    '<div class="panel toolbar">' +
+      '<input id="qk-ko" placeholder="韩语单词，如 공부하다" style="flex:1">' +
+      '<input id="qk-zh" placeholder="中文释义，如 学习" style="flex:1">' +
+      '<button class="btn primary" id="qk-add">添加</button>' +
+    '</div>' +
+    '<div id="qk-msg" class="tip"></div>' +
+    '<div class="toolbar">' +
+      '<button class="btn primary" id="btn-start-review">开始今日复习</button>' +
+      '<button class="btn" id="btn-open-errors">打开错题库</button>' +
+    '</div>' +
+    '<div class="home-extra">' +
+      '<div class="panel" style="text-align:center"><div class="stat-line" style="margin-bottom:6px">今日小卡</div>' +
+        '<div class="polaroid"><img id="home-idol" alt="아이돌" onerror="this.style.display=\'none\'"><div class="cap">오늘의 아이돌 ♡</div></div>' +
+      '</div>' +
+      '<div class="panel"><div class="stat-line">累计单词：<b>' + st.totalWords + '</b></div>' +
+        '<div class="stat-line">连续学习：<b>' + st.studyDays + '</b> 天</div>' +
+        '<div class="stat-line">今日新增：<b>' + st.newAdded + '</b>　待复习：<b>' + st.dueReview + '</b></div></div>' +
+    '</div>';
+  $('qk-add').onclick = function () { AppUI.quickAdd(); };
+  $('qk-ko').onkeydown = function (e) { if (e.key === 'Enter') $('qk-zh').focus(); };
+  $('qk-zh').onkeydown = function (e) { if (e.key === 'Enter') AppUI.quickAdd(); };
+  $('btn-start-review').onclick = function () { navigate('review'); AppUI.startReview('zh2ko'); };
+  $('btn-open-errors').onclick = function () { navigate('errors'); };
+  var cards = document.querySelectorAll('#view-home .card[data-nav]');
+  for (var i = 0; i < cards.length; i++) {
+    cards[i].onclick = (function (v) { return function () { navigate(v); }; })(cards[i].getAttribute('data-nav'));
+  }
+  applyDailyIdol();
+}
+function quickAdd() {
+  var ko = $('qk-ko').value, zh = $('qk-zh').value;
+  var res = AppUI.addWord(ko, zh, []);
+  var msg = $('qk-msg');
+  if (res.status === 'added') {
+    $('qk-ko').value = ''; $('qk-zh').value = '';
+    renderHome();
+    $('qk-ko').focus();
+  } else if (res.status === 'duplicate') {
+    msg.innerHTML = '⚠ ' + escapeHtml(res.message) + '。<a href="#" id="qk-skip">跳过</a>';
+    $('qk-skip').onclick = function (e) { e.preventDefault(); pendingDup = null; msg.innerHTML = ''; };
+  } else {
+    msg.textContent = res.message || '韩语和中文都不能为空';
+  }
+}
+
+/* ---------- 录入 ---------- */
+function addWord(ko, zh, tags) {
+  var res = AppCore.addWordEntry(state.words, ko, zh, tags, today());
+  if (res.status === 'invalid') return { status: 'invalid', message: '韩语和中文都不能为空' };
+  if (res.status === 'duplicate') {
+    pendingDup = res.existing;
+    return { status: 'duplicate', message: '该单词已存在：' + res.existing.ko + ' = ' + res.existing.zh };
+  }
+  state.words = res.words;
+  recAdded(1);
+  persist();
+  renderAll();
+  return { status: 'added' };
+}
+function mergePending(zh, tags) {
+  if (!pendingDup) return;
+  var merged = AppCore.mergeEntry(pendingDup, zh, tags || []);
+  updateWord(pendingDup.id, merged);
+  pendingDup = null;
+  persist();
+  renderAll();
+}
+function renderAdd() {
+  var t = today();
+  var todayWords = state.words.filter(function (w) { return w.createdAt === t; });
+  var rows = todayWords.length ? todayWords.map(function (w) {
+    return '<div class="row"><span class="ko">' + escapeHtml(w.ko) + '</span><span class="zh">' + escapeHtml(w.zh) + '</span><span class="ops"><button class="btn small" data-del="' + w.id + '">删除</button></span></div>';
+  }).join('') : '<div class="empty">今天还没有录入新单词</div>';
+  $('view-add').innerHTML =
+    '<h1 class="page-title">每日学习录入</h1>' +
+    '<div class="panel toolbar">' +
+      '<input id="add-ko" placeholder="韩语单词" style="flex:1">' +
+      '<input id="add-zh" placeholder="中文释义" style="flex:1">' +
+      '<input id="add-tags" placeholder="标签（可选，动词、名词）" style="flex:1">' +
+      '<button class="btn primary" id="add-go">添加并继续</button>' +
+    '</div>' +
+    '<div id="add-msg" class="tip"></div>' +
+    '<h1 class="page-title" style="margin-top:18px">今日已录（' + todayWords.length + '）</h1>' +
+    '<div class="list">' + rows + '</div>' +
+    '<div class="tip">自动记录日期；今天录入的单词，明天自动进入复习池。</div>';
+  function doAddGo() {
+    var ko = $('add-ko').value, zh = $('add-zh').value, tagText = $('add-tags').value;
+    var tags = AppCore.splitMeanings(tagText);
+    var res = AppUI.addWord(ko, zh, tags);
+    var msg = $('add-msg');
+    if (res.status === 'added') {
+      $('add-ko').value = ''; $('add-zh').value = ''; $('add-tags').value = '';
+      renderAdd();
+      $('add-ko').focus();
+    } else if (res.status === 'duplicate') {
+      msg.innerHTML = '⚠ ' + escapeHtml(res.message) + ' <button class="btn small primary" id="add-merge">合并释义到已有</button> <button class="btn small" id="add-skip">跳过</button>';
+      $('add-merge').onclick = function () { AppUI.mergePending(zh, tags); msg.innerHTML = ''; renderAdd(); };
+      $('add-skip').onclick = function () { pendingDup = null; msg.innerHTML = ''; };
+    } else {
+      msg.textContent = res.message || '填写有误';
+    }
+  }
+  $('add-go').onclick = doAddGo;
+  $('add-ko').onkeydown = function (e) { if (e.key === 'Enter') $('add-zh').focus(); };
+  $('add-zh').onkeydown = function (e) { if (e.key === 'Enter') doAddGo(); };
+  $('add-tags').onkeydown = function (e) { if (e.key === 'Enter') doAddGo(); };
+  var delBtns = document.querySelectorAll('#view-add [data-del]');
+  for (var i = 0; i < delBtns.length; i++) {
+    delBtns[i].onclick = function () { AppUI.confirmRemove(this.getAttribute('data-del')); };
+  }
+}
+
+/* ---------- 单词库 ---------- */
+function renderWordsList() {
+  var q = AppCore.normalizeText(searchQuery);
+  var list = state.words.filter(function (w) {
+    if (activeTag !== '全部' && w.tags.indexOf(activeTag) < 0) return false;
+    if (q && w.ko.indexOf(q) < 0 && w.zh.indexOf(q) < 0) return false;
+    return true;
+  });
+  var rows = list.length ? list.map(function (w) {
+    var tags = w.tags.map(function (t) { return '<span class="tag">' + escapeHtml(t) + '</span>'; }).join(' ');
+    return '<div class="row"><span class="ko">' + escapeHtml(w.ko) + '</span><span class="zh">' + escapeHtml(w.zh) + '</span>' +
+      '<span class="meta">' + tags + ' ' + escapeHtml(w.createdAt) + (w.isError ? ' <span class="tag">错题</span>' : '') + '</span>' +
+      '<span class="ops"><button class="btn small" data-edit="' + w.id + '">编辑</button> <button class="btn small" data-del="' + w.id + '">删除</button></span></div>';
+  }).join('') : '<div class="empty">没有匹配的单词</div>';
+  $('w-list').innerHTML = rows;
+  var editBtns = document.querySelectorAll('#w-list [data-edit]');
+  for (var j = 0; j < editBtns.length; j++) {
+    editBtns[j].onclick = function () { AppUI.openEdit(this.getAttribute('data-edit')); };
+  }
+  var delBtns = document.querySelectorAll('#w-list [data-del]');
+  for (var k = 0; k < delBtns.length; k++) {
+    delBtns[k].onclick = function () { AppUI.confirmRemove(this.getAttribute('data-del')); };
+  }
+}
+function renderWords() {
+  var allTags = [];
+  state.words.forEach(function (w) { w.tags.forEach(function (t) { if (allTags.indexOf(t) < 0) allTags.push(t); }); });
+  var pills = '<button class="tag' + (activeTag === '全部' ? ' on' : '') + '" data-tag="全部">全部</button>' +
+    allTags.map(function (t) { return '<button class="tag' + (activeTag === t ? ' on' : '') + '" data-tag="' + escapeHtml(t) + '">' + escapeHtml(t) + '</button>'; }).join('');
+  $('view-words').innerHTML =
+    '<h1 class="page-title">单词库（' + state.words.length + '）</h1>' +
+    '<div class="toolbar"><input id="w-search" placeholder="搜索韩语或中文" style="flex:1" value="' + escapeHtml(searchQuery) + '"></div>' +
+    '<div class="toolbar">' + pills + '</div>' +
+    '<div class="list" id="w-list"></div>';
+  // 只更新列表，不重建搜索框，保证输入法(IME)组合态与焦点不被打断
+  $('w-search').oninput = function () { searchQuery = this.value; renderWordsList(); };
+  var tagBtns = document.querySelectorAll('#view-words [data-tag]');
+  for (var i = 0; i < tagBtns.length; i++) {
+    tagBtns[i].onclick = function () { activeTag = this.getAttribute('data-tag'); renderWordsList(); };
+  }
+  renderWordsList();
+}
+function openEdit(id) {
+  var w = findWord(id);
+  if (!w) return;
+  openModal(
+    '<h3>编辑单词</h3>' +
+    '<label>韩语</label><input id="e-ko" style="width:100%" value="' + escapeHtml(w.ko) + '">' +
+    '<label>中文释义</label><input id="e-zh" style="width:100%" value="' + escapeHtml(w.zh) + '">' +
+    '<label>标签（用、或，分隔）</label><input id="e-tags" style="width:100%" value="' + escapeHtml(w.tags.join('、')) + '">' +
+    '<div class="modal-ops"><button class="btn" id="e-cancel">取消</button><button class="btn primary" id="e-save">保存</button></div>'
+  );
+  $('e-cancel').onclick = closeModal;
+  $('e-save').onclick = function () {
+    updateWord(id, { ko: AppCore.normalizeText($('e-ko').value), zh: AppCore.normalizeText($('e-zh').value), tags: AppCore.splitMeanings($('e-tags').value) });
+    persist(); closeModal(); renderAll();
+  };
+}
+function confirmRemove(id) {
+  var w = findWord(id);
+  if (!w) return;
+  openModal(
+    '<h3>确认删除</h3><p class="tip" style="font-size:13px">确定删除「' + escapeHtml(w.ko) + ' = ' + escapeHtml(w.zh) + '」吗？此操作不可恢复。</p>' +
+    '<div class="modal-ops"><button class="btn" id="r-cancel">取消</button><button class="btn danger" id="r-ok">删除</button></div>'
+  );
+  $('r-cancel').onclick = closeModal;
+  $('r-ok').onclick = function () {
+    var w = findWord(id);
+    if (w && w.createdAt === today()) {
+      var t = today();
+      if (state.studyLog[t]) {
+        state.studyLog[t].added = Math.max(0, (state.studyLog[t].added || 0) - 1);
+      }
+    }
+    state.words = state.words.filter(function (x) { return x.id !== id; });
+    persist(); closeModal(); renderAll();
+  };
+}
+
+/* ---------- 复习 ---------- */
+function renderReviewSetup() {
+  var due = AppCore.buildReviewQueue(state.words, state.settings, today(), { onlyErrors: onlyErrors });
+  $('view-review').innerHTML =
+    '<h1 class="page-title">单词复习</h1>' +
+    '<div class="panel">' +
+      '<div class="mode-pick">' +
+        '<label class="mode-card on"><input type="radio" name="mode" value="zh2ko" checked><div class="mc-big">中 → 한</div><div class="mc-sub">给中文写韩语</div></label>' +
+        '<label class="mode-card"><input type="radio" name="mode" value="ko2zh"><div class="mc-big">한 → 中</div><div class="mc-sub">给韩语写中文</div></label>' +
+      '</div>' +
+      '<div class="stat-line">每轮题量：<b>' + state.settings.roundSize + '</b>　' +
+        '<label class="switch"><input type="checkbox" id="rv-errormode"' + (onlyErrors ? ' checked' : '') + '> 只刷错题（当前' + (onlyErrors ? '开' : '关') + '）</label>' +
+      '</div>' +
+      '<div class="stat-line">本轮可复习：<b>' + due.length + '</b> 词' + (due.length === 0 ? '（没有待复习单词）' : '') + '</div>' +
+      '<div class="toolbar" style="margin-top:12px"><button class="btn primary" id="rv-start">开始复习</button></div>' +
+    '</div>';
+  $('rv-errormode').onchange = function () { onlyErrors = this.checked; renderReviewSetup(); };
+  var modeCards = document.querySelectorAll('#view-review .mode-card');
+  function syncModeCards() {
+    for (var i = 0; i < modeCards.length; i++) {
+      var r = modeCards[i].querySelector('input[type="radio"]');
+      modeCards[i].classList.toggle('on', r.checked);
+    }
+  }
+  for (var j = 0; j < modeCards.length; j++) {
+    modeCards[j].querySelector('input[type="radio"]').onchange = syncModeCards;
+  }
+  $('rv-start').onclick = function () {
+    var mode = document.querySelector('input[name="mode"]:checked').value;
+    AppUI.startReview(mode);
+  };
+}
+function startReview(mode) {
+  var queue = AppCore.buildReviewQueue(state.words, state.settings, today(), { onlyErrors: onlyErrors });
+  if (queue.length === 0) { renderReviewSetup(); return; }
+  session = { queue: queue, index: 0, mode: mode || 'zh2ko', correct: 0, wrong: 0, newErrors: 0, answered: false };
+  renderQuestion();
+}
+function renderQuestion() {
+  var item = session.queue[session.index];
+  var prompt = session.mode === 'zh2ko' ? item.zh : item.ko;
+  var hint = session.mode === 'zh2ko' ? '看中文，写出韩语' : '看韩语，写出中文释义';
+  var modeLabel = session.mode === 'zh2ko' ? '중 → 한' : '한 → 중';
+  $('view-review').innerHTML =
+    '<div class="qstage"><div class="qcard">' +
+      '<div class="qmode">' + modeLabel + '　·　第 ' + (session.index + 1) + ' / ' + session.queue.length + ' 题</div>' +
+      '<div class="q-prompt">' + escapeHtml(prompt) + '</div>' +
+      '<div class="q-hint">' + hint + '</div>' +
+      '<div class="q-input"><input id="ans" placeholder="输入答案后按回车或点提交"><button class="btn primary" id="ans-submit">提交</button></div>' +
+      '<div id="ans-fb" style="width:100%"></div>' +
+      '<div class="center" style="margin-top:14px"><button class="btn hidden" id="ans-next">下一题 →</button></div>' +
+    '</div></div>';
+  var input = $('ans');
+  input.focus();
+  input.onkeydown = function (e) { if (e.key === 'Enter') AppUI.submitAnswer(input.value); };
+  $('ans-submit').onclick = function () { AppUI.submitAnswer(input.value); };
+  $('ans-next').onclick = function () { AppUI.nextQuestion(); };
+}
+function submitAnswer(text) {
+  if (!session || session.answered) return;
+  var item = session.queue[session.index];
+  var answer = session.mode === 'zh2ko' ? item.ko : item.zh;
+  var correct = AppCore.judgeAnswer(text, answer, session.mode);
+  var wasError = !!item.isError;
+  var updated = AppCore.applyAnswer(item, correct, today(), state.settings);
+  updated.lastReviewedAt = today();
+  updateWord(item.id, updated);
+  recReviewed();
+  if (correct) { session.correct++; } else {
+    session.wrong++;
+    if (!wasError) session.newErrors++;
+  }
+  session.answered = true;
+  persist();
+  var fb = $('ans-fb');
+  if (correct) {
+    fb.innerHTML = '<div class="fb ok">✓ 答对了！</div>';
+  } else {
+    fb.innerHTML = '<div class="fb no">✗ 正确答案：<b>' + escapeHtml(answer) + '</b>（已加入错题）</div>';
+  }
+  $('ans-next').classList.remove('hidden');
+}
+function nextQuestion() {
+  if (!session) return;
+  session.index++;
+  session.answered = false;
+  if (session.index >= session.queue.length) renderSummary(); else renderQuestion();
+}
+function renderSummary() {
+  $('view-review').innerHTML =
+    '<h1 class="page-title">本轮小结</h1>' +
+    '<div class="panel center">' +
+      '<div class="stat-line">总题数：<b>' + session.queue.length + '</b></div>' +
+      '<div class="stat-line">答对：<b>' + session.correct + '</b>　答错：<b>' + session.wrong + '</b></div>' +
+      '<div class="stat-line">新增错题：<b>' + session.newErrors + '</b></div>' +
+      '<div class="toolbar" style="justify-content:center;margin-top:14px">' +
+        '<button class="btn primary" id="sum-again">再刷一轮</button>' +
+        '<button class="btn" id="sum-home">返回首页</button>' +
+      '</div>' +
+    '</div>';
+  $('sum-again').onclick = function () { AppUI.startReview(session.mode); };
+  $('sum-home').onclick = function () { navigate('home'); };
+}
+
+/* ---------- 错题库 ---------- */
+function renderErrors() {
+  var list = state.words.filter(function (w) { return w.isError; });
+  var rows = list.length ? list.map(function (w) {
+    var pct = Math.min(100, Math.round(w.correctStreak / state.settings.removeAfter * 100));
+    return '<div class="row"><span class="ko">' + escapeHtml(w.ko) + '</span><span class="zh">' + escapeHtml(w.zh) + '</span>' +
+      '<span class="meta"><div class="bar"><i style="width:' + pct + '%"></i></div>' + w.correctStreak + '/' + state.settings.removeAfter + '</span>' +
+      '<span class="ops"><button class="btn small" data-edit="' + w.id + '">编辑</button> <button class="btn small" data-del="' + w.id + '">移除</button></span></div>';
+  }).join('') : '<div class="empty">错题库是空的，继续加油</div>';
+  $('view-errors').innerHTML =
+    '<h1 class="page-title">错题库管理（' + list.length + '）</h1>' +
+    '<div class="panel toolbar"><label class="switch"><input type="checkbox" id="err-toggle"' + (onlyErrors ? ' checked' : '') + '> 只刷错题（开启后复习只出错误题）</label></div>' +
+    '<div class="list">' + rows + '</div>' +
+    '<div class="tip">错题在复习中随机出现；连续答对满 ' + state.settings.removeAfter + ' 次自动移出错题库，回归普通词库。</div>';
+  $('err-toggle').onchange = function () { onlyErrors = this.checked; renderErrors(); };
+  var editBtns = document.querySelectorAll('#view-errors [data-edit]');
+  for (var i = 0; i < editBtns.length; i++) editBtns[i].onclick = function () { AppUI.openEdit(this.getAttribute('data-edit')); };
+  var delBtns = document.querySelectorAll('#view-errors [data-del]');
+  for (var k = 0; k < delBtns.length; k++) delBtns[k].onclick = function () { AppUI.confirmRemove(this.getAttribute('data-del')); };
+}
+
+/* ---------- 设置 ---------- */
+function renderSettings() {
+  $('view-settings').innerHTML =
+    '<h1 class="page-title">数据与设置</h1>' +
+    '<div class="panel">' +
+      '<h3 style="font-size:14px;margin-bottom:8px">备份与恢复</h3>' +
+      '<div class="toolbar"><button class="btn primary" id="st-export">导出备份文件</button>' +
+      '<label class="btn">导入恢复文件<input type="file" id="st-import" accept=".json,application/json" style="display:none"></label></div>' +
+      '<div id="st-msg" class="tip"></div>' +
+    '</div>' +
+    '<div class="panel" style="margin-top:12px">' +
+      '<h3 style="font-size:14px;margin-bottom:8px">偏好设置</h3>' +
+      '<div class="toolbar"><span>每轮题量：<input id="st-size" type="number" value="' + state.settings.roundSize + '" style="width:80px"></span>' +
+      '<span>连续答对移出次数：<input id="st-after" type="number" value="' + state.settings.removeAfter + '" style="width:80px"></span></div>' +
+      '<div class="toolbar"><span style="line-height:32px">主题色：</span>' +
+        '<button class="pill' + (curTheme() === 'green' ? ' on' : '') + '" data-th="green">淡绿</button>' +
+        '<button class="pill' + (curTheme() === 'blue' ? ' on' : '') + '" data-th="blue">淡蓝</button>' +
+        '<button class="pill' + (curTheme() === 'light' ? ' on' : '') + '" data-th="light">浅色</button>' +
+        '<button class="pill' + (curTheme() === 'dark' ? ' on' : '') + '" data-th="dark">深色</button></div>' +
+      '<div class="toolbar"><button class="btn primary" id="st-save">保存设置</button>' +
+      '<button class="btn danger" id="st-reset">恢复默认设置</button></div>' +
+    '</div>' +
+    '<div class="tip">全部数据仅保存在本机浏览器中，无需登录联网。建议定期导出备份，防止浏览器数据被清理。</div>';
+  $('st-export').onclick = function () {
+    var text = AppUI.doExport();
+    var blob = new Blob([text], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '韩语学习备份_' + today() + '.json';
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    $('st-msg').textContent = '已导出备份文件。';
+  };
+  $('st-import').onchange = function () {
+    var file = this.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var text = reader.result;
+      openModal(
+        '<h3>导入备份</h3><p class="tip" style="font-size:13px">导入将用备份文件覆盖当前全部数据，确定继续吗？</p>' +
+        '<div class="modal-ops"><button class="btn" id="im-cancel">取消</button><button class="btn danger" id="im-ok">确认导入</button></div>'
+      );
+      $('im-cancel').onclick = function () { closeModal(); };
+      $('im-ok').onclick = function () {
+        var res = AppUI.doImport(text);
+        closeModal();
+        $('st-msg').textContent = res.ok ? '导入成功。' : ('导入失败：' + res.error);
+        if (res.ok) renderSettings();
+      };
+    };
+    reader.readAsText(file, 'utf-8');
+  };
+  $('st-save').onclick = function () {
+    AppUI.saveSettings(parseInt($('st-size').value, 10), parseInt($('st-after').value, 10));
+    $('st-msg').textContent = '设置已保存。';
+  };
+  $('st-reset').onclick = function () {
+    AppUI.resetSettings();
+    renderSettings();
+  };
+  var thBtns = document.querySelectorAll('#view-settings [data-th]');
+  for (var i = 0; i < thBtns.length; i++) {
+    thBtns[i].onclick = function () { setTheme(this.getAttribute('data-th')); renderSettings(); };
+  }
+}
+function doExport() { return AppCore.exportJSON(state); }
+function doImport(text) {
+  var res = AppCore.importJSON(text);
+  if (res.ok) { state = res.state; persist(); }
+  return res;
+}
+function saveSettings(roundSize, removeAfter) {
+  state.settings.roundSize = Math.max(1, Math.min(100, roundSize | 0 || 20));
+  state.settings.removeAfter = Math.max(1, Math.min(10, removeAfter | 0 || 3));
+  persist();
+}
+function resetSettings() {
+  var keepTheme = state.settings && state.settings.theme;
+  state.settings = { roundSize: 20, removeAfter: 3 };
+  if (keepTheme) state.settings.theme = keepTheme;
+  persist();
+}
+
+/* ---------- 启动 ---------- */
+var AppUI = {
+  navigate: navigate, boot: function () {
+    applyTheme(curTheme());
+    applyDailyBackground();
+    var btns = document.querySelectorAll('#nav .nav-btn');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].onclick = (function (v) { return function () { navigate(v); }; })(btns[i].getAttribute('data-view'));
+    }
+    navigate('home');
+  },
+  quickAdd: quickAdd, addWord: addWord, mergePending: mergePending,
+  startReview: startReview, submitAnswer: submitAnswer, nextQuestion: nextQuestion,
+  doExport: doExport, doImport: doImport, saveSettings: saveSettings, resetSettings: resetSettings,
+  openEdit: openEdit, confirmRemove: confirmRemove, renderAll: renderAll,
+  _getState: function () { return state; }, _getSession: function () { return session; },
+  _setOnlyErrors: function (v) { onlyErrors = !!v; },
+  _reset: function () { state = AppCore.loadState(); searchQuery = ''; activeTag = '全部'; navigate('home'); }
+};
+AppUI.boot();
+/* ==== UI-END ==== */
+</script>
+</body>
+</html>
