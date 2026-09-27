@@ -416,6 +416,7 @@ var searchQuery = '';
 var activeTag = '全部';
 var wordsPage = 1;
 var WORDS_PAGE_SIZE = 50;
+var SESSION_KEY = 'hanStudyApp.reviewSession';
 
 function $(id) { return document.getElementById(id); }
 function today() { return AppCore.todayKey(); }
@@ -499,6 +500,44 @@ function escapeHtml(s) {
   });
 }
 
+/* ---------- 复习进度持久化（中途退出/刷新后继续） ---------- */
+function saveSession() {
+  try {
+    if (!session) { localStorage.removeItem(SESSION_KEY); return; }
+    localStorage.setItem(SESSION_KEY, JSON.stringify({
+      queueIds: session.queue.map(function (w) { return w.id; }),
+      index: session.index,
+      mode: session.mode,
+      correct: session.correct,
+      wrong: session.wrong,
+      newErrors: session.newErrors,
+      answered: session.answered
+    }));
+  } catch (e) {}
+}
+function clearSessionStorage() {
+  try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
+}
+function loadSessionFromStorage() {
+  try {
+    var raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    var d = JSON.parse(raw);
+    if (!d || !Array.isArray(d.queueIds)) return null;
+    var queue = d.queueIds.map(function (id) { return findWord(id); }).filter(Boolean);
+    if (!queue.length) return null;
+    return {
+      queue: queue,
+      index: Math.max(0, d.index | 0),
+      mode: d.mode || 'zh2ko',
+      correct: d.correct | 0,
+      wrong: d.wrong | 0,
+      newErrors: d.newErrors | 0,
+      answered: !!d.answered
+    };
+  } catch (e) { return null; }
+}
+
 /* ---------- 导航 ---------- */
 var currentView = 'home';
 function navigate(view) {
@@ -518,9 +557,29 @@ function renderAll() {
   if (currentView === 'home') renderHome();
   else if (currentView === 'words') renderWords();
   else if (currentView === 'add') renderAdd();
-  else if (currentView === 'review') renderReviewSetup();
+  else if (currentView === 'review') renderReviewEntry();
   else if (currentView === 'errors') renderErrors();
   else if (currentView === 'settings') renderSettings();
+}
+// 进入复习页：优先恢复进行中的复习，而不是重新开始
+function renderReviewEntry() {
+  if (session) {
+    if (session.index >= session.queue.length) renderSummary(); else renderQuestion();
+    return;
+  }
+  var restored = loadSessionFromStorage();
+  if (restored) {
+    session = restored;
+    if (session.answered) {
+      // 上一题已作答但未进入下一题（如答错后退出），直接推进
+      session.answered = false;
+      session.index++;
+      saveSession();
+    }
+    if (session.index >= session.queue.length) renderSummary(); else renderQuestion();
+    return;
+  }
+  renderReviewSetup();
 }
 
 /* ---------- 顶部问候栏 ---------- */
@@ -830,6 +889,7 @@ function startReview(mode) {
   var queue = AppCore.buildReviewQueue(state.words, state.settings, today(), { onlyErrors: onlyErrors });
   if (queue.length === 0) { renderReviewSetup(); return; }
   session = { queue: queue, index: 0, mode: mode || 'zh2ko', correct: 0, wrong: 0, newErrors: 0, answered: false };
+  saveSession();
   renderQuestion();
 }
 function renderQuestion() {
@@ -888,6 +948,7 @@ function submitAnswer(text) {
   }
   session.answered = true;
   persist();
+  saveSession();
   var fb = $('ans-fb');
   var showAnswer = answer;
   if (session.mode === 'zh2ko' && session._group && session._group.length > 1) {
@@ -907,6 +968,7 @@ function nextQuestion() {
   if (!session) return;
   session.index++;
   session.answered = false;
+  saveSession();
   if (session.index >= session.queue.length) renderSummary(); else renderQuestion();
 }
 function renderSummary() {
@@ -922,7 +984,7 @@ function renderSummary() {
       '</div>' +
     '</div>';
   $('sum-again').onclick = function () { AppUI.startReview(session.mode); };
-  $('sum-home').onclick = function () { navigate('home'); };
+  $('sum-home').onclick = function () { session = null; clearSessionStorage(); navigate('home'); };
 }
 
 /* ---------- 错题库 ---------- */
@@ -1047,6 +1109,7 @@ var AppUI = {
   doExport: doExport, doImport: doImport, saveSettings: saveSettings, resetSettings: resetSettings,
   openEdit: openEdit, confirmRemove: confirmRemove, renderAll: renderAll,
   _getState: function () { return state; }, _getSession: function () { return session; },
+  _setSession: function (s) { session = s; },
   _setOnlyErrors: function (v) { onlyErrors = !!v; },
   _reset: function () { state = AppCore.loadState(); searchQuery = ''; activeTag = '全部'; wordsPage = 1; navigate('home'); }
 };
