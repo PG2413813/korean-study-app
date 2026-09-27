@@ -137,3 +137,70 @@ test('问题3 空输入提醒后，正常输入仍可正常判题', () => {
   s = AppUI._getSession();
   assert(s.correct === 1, '提醒后正常作答应算对');
 });
+
+/* ===== 问题4：复习中途退出/切页后重新进入应继续，而不是重新开始 ===== */
+test('问题4 切到其他页面再回到复习页，进度保留', () => {
+  seedReviewable(4);
+  AppUI.startReview('zh2ko');
+  var s = AppUI._getSession();
+  // 答对第1题 → 自动进入第2题
+  $('ans').value = s.queue[0].ko;
+  withSyncTimers(function () { $('ans').onkeydown({ key: 'Enter' }); });
+  s = AppUI._getSession();
+  assert(s.index === 1, '答对后应在第2题');
+  // 中途切到首页再回来
+  AppUI.navigate('home');
+  AppUI.navigate('review');
+  s = AppUI._getSession();
+  assert(s && s.index === 1, '回来后应仍在第2题，实际 index=' + (s && s.index));
+  assert(!!$('ans'), '应显示题目而不是设置页');
+  assert(!$('rv-start'), '不应出现重新开始的设置页');
+});
+
+test('问题4 刷新（内存丢失）后重新进入复习页，从 localStorage 恢复进度', () => {
+  seedReviewable(4);
+  AppUI.startReview('zh2ko');
+  var s = AppUI._getSession();
+  $('ans').value = s.queue[0].ko;
+  withSyncTimers(function () { $('ans').onkeydown({ key: 'Enter' }); });
+  s = AppUI._getSession();
+  assert(s.index === 1, '答对后应在第2题');
+  assert(localStorage.getItem('hanStudyApp.reviewSession') !== null, '应已持久化复习进度');
+  // 模拟刷新：内存 session 丢失
+  AppUI._setSession(null);
+  AppUI.navigate('review');
+  s = AppUI._getSession();
+  assert(s && s.index === 1, '刷新后应从存储恢复，仍在第2题');
+  assert(!!$('ans'), '应恢复题目界面');
+});
+
+test('问题4 答错后退出再回来，自动推进到下一题（不重复计分）', () => {
+  seedReviewable(3);
+  AppUI.startReview('zh2ko');
+  var s = AppUI._getSession();
+  $('ans').value = '틀린답';
+  withSyncTimers(function () { $('ans').onkeydown({ key: 'Enter' }); });
+  s = AppUI._getSession();
+  assert(s.wrong === 1 && s.answered === true, '答错后已作答状态');
+  // 退出再回来（模拟刷新）
+  AppUI._setSession(null);
+  AppUI.navigate('review');
+  s = AppUI._getSession();
+  assert(s && s.index === 1 && s.answered === false, '回来应推进到第2题且未作答');
+});
+
+test('问题4 一轮完成后返回首页会清除存档；再进复习页是设置页', () => {
+  seedReviewable(2);
+  AppUI.startReview('zh2ko');
+  var s = AppUI._getSession();
+  $('ans').value = s.queue[0].ko;
+  withSyncTimers(function () { $('ans').onkeydown({ key: 'Enter' }); });
+  s = AppUI._getSession();
+  $('ans').value = s.queue[1].ko;
+  withSyncTimers(function () { $('ans').onkeydown({ key: 'Enter' }); });
+  assert(!!$('sum-again'), '应进入小结');
+  $('sum-home').onclick();
+  assert(localStorage.getItem('hanStudyApp.reviewSession') === null, '返回首页应清除存档');
+  AppUI.navigate('review');
+  assert(!!$('rv-start'), '再进复习页应显示设置页');
+});
