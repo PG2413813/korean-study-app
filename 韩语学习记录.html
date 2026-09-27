@@ -658,7 +658,13 @@ function quickAdd() {
     $('qk-ko').focus();
   } else if (res.status === 'duplicate') {
     msg.innerHTML = '⚠ ' + escapeHtml(res.message) + '。<a href="#" id="qk-skip">跳过</a>';
-    $('qk-skip').onclick = function (e) { e.preventDefault(); pendingDup = null; msg.innerHTML = ''; };
+    $('qk-skip').onclick = function (e) {
+      e.preventDefault();
+      pendingDup = null;
+      msg.innerHTML = '';
+      $('qk-ko').value = ''; $('qk-zh').value = '';
+      $('qk-ko').focus();
+    };
   } else {
     msg.textContent = res.message || '韩语和中文都不能为空';
   }
@@ -715,8 +721,18 @@ function renderAdd() {
       $('add-ko').focus();
     } else if (res.status === 'duplicate') {
       msg.innerHTML = '⚠ ' + escapeHtml(res.message) + ' <button class="btn small primary" id="add-merge">合并释义到已有</button> <button class="btn small" id="add-skip">跳过</button>';
-      $('add-merge').onclick = function () { AppUI.mergePending(zh, tags); msg.innerHTML = ''; renderAdd(); };
-      $('add-skip').onclick = function () { pendingDup = null; msg.innerHTML = ''; };
+      $('add-merge').onclick = function () {
+        AppUI.mergePending(zh, tags);
+        // mergePending 已重建页面并清空输入框，这里只需聚焦韩语框继续录入
+        $('add-ko').focus();
+      };
+      $('add-skip').onclick = function () {
+        pendingDup = null;
+        msg.innerHTML = '';
+        // 跳过：清空输入框，焦点回到韩语框继续录入
+        $('add-ko').value = ''; $('add-zh').value = ''; $('add-tags').value = '';
+        $('add-ko').focus();
+      };
     } else {
       msg.textContent = res.message || '填写有误';
     }
