@@ -60,3 +60,51 @@ test('问题1 答对自动推进到最后一题后显示小结', () => {
   withSyncTimers(function () { $('ans').onkeydown({ key: 'Enter' }); });
   assert(!!$('sum-again'), '最后一题答对后应进入小结页');
 });
+
+/* ===== 问题2：一个中文对应多个韩语单词，全部算对并给出所有韩语 ===== */
+test('问题2 核心：findSynonymGroup 按中文释义交集聚合同义词', () => {
+  var words = [
+    { id: 'w1', ko: '공부하다', zh: '学习' },
+    { id: 'w2', ko: '배우다', zh: '学习' },
+    { id: 'w3', ko: '사과', zh: '苹果' }
+  ];
+  var g = AppCore.findSynonymGroup(words, words[0]);
+  assert(g.length === 2 && g.some(function (x) { return x.id === 'w2'; }), '应聚合同义韩语，实际 ' + g.length);
+  var g3 = AppCore.findSynonymGroup(words, words[2]);
+  assert(g3.length === 1, '无同义词时只含自身');
+});
+
+test('问题2 复习：中文题输入同组另一个韩语也算对，反馈列出所有韩语', () => {
+  seedState({
+    version: 1, settings: { roundSize: 20, removeAfter: 3 }, studyLog: {},
+    words: [
+      { id: 'w1', ko: '공부하다', zh: '学习', tags: [], createdAt: '2000-01-01', lastReviewedAt: null, isError: false, errorSince: null, correctStreak: 0 },
+      { id: 'w2', ko: '배우다', zh: '学习', tags: [], createdAt: '2000-01-01', lastReviewedAt: null, isError: false, errorSince: null, correctStreak: 0 }
+    ]
+  });
+  AppUI.startReview('zh2ko');
+  var s = AppUI._getSession();
+  assert(s.queue[0].zh === '学习', '中文题应显示 学习');
+  // 输入同组另一个韩语 배우다（不是当前词条 공부하다）
+  $('ans').value = '배우다';
+  withSyncTimers(function () { $('ans').onkeydown({ key: 'Enter' }); });
+  s = AppUI._getSession();
+  assert(s.correct === 1 && s.wrong === 0, '同义韩语应算对');
+  assert(!!s._group && s._group.length === 2, '应记录同义词组');
+});
+
+test('问题2 复习：答错时反馈展示该中文对应的所有韩语', () => {
+  seedState({
+    version: 1, settings: { roundSize: 20, removeAfter: 3 }, studyLog: {},
+    words: [
+      { id: 'w1', ko: '공부하다', zh: '学习', tags: [], createdAt: '2000-01-01', lastReviewedAt: null, isError: false, errorSince: null, correctStreak: 0 },
+      { id: 'w2', ko: '배우다', zh: '学习', tags: [], createdAt: '2000-01-01', lastReviewedAt: null, isError: false, errorSince: null, correctStreak: 0 }
+    ]
+  });
+  AppUI.startReview('zh2ko');
+  var s = AppUI._getSession();
+  $('ans').value = '틀린답';
+  withSyncTimers(function () { $('ans').onkeydown({ key: 'Enter' }); });
+  var fbText = $('ans-fb').textContent;
+  assert(fbText.indexOf('공부하다') >= 0 && fbText.indexOf('배우다') >= 0, '错误反馈应列出所有韩语，实际：' + fbText);
+});
