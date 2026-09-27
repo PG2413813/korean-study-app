@@ -108,3 +108,32 @@ test('问题2 复习：答错时反馈展示该中文对应的所有韩语', () 
   var fbText = $('ans-fb').textContent;
   assert(fbText.indexOf('공부하다') >= 0 && fbText.indexOf('배우다') >= 0, '错误反馈应列出所有韩语，实际：' + fbText);
 });
+
+/* ===== 问题3：空输入误触回车只提醒，不判错不进错题库 ===== */
+test('问题3 空输入回车：提醒且不判错、不推进、不进错题库', () => {
+  seedReviewable(2);
+  AppUI.startReview('zh2ko');
+  var s = AppUI._getSession();
+  // 误触回车（空输入）
+  $('ans').value = '';
+  $('ans').onkeydown({ key: 'Enter' });
+  s = AppUI._getSession();
+  assert(s.wrong === 0 && s.correct === 0, '空输入不应计入对错');
+  assert(s.index === 0 && s.answered === false, '空输入不应推进题目');
+  assert(AppUI._getState().words.every(function (w) { return !w.isError; }), '空输入不应产生错题');
+  var fbText = $('ans-fb').textContent;
+  assert(fbText.indexOf('还没有输入答案') >= 0, '应显示提醒，实际：' + fbText);
+});
+
+test('问题3 空输入提醒后，正常输入仍可正常判题', () => {
+  seedReviewable(2);
+  AppUI.startReview('zh2ko');
+  var s = AppUI._getSession();
+  $('ans').value = '';
+  $('ans').onkeydown({ key: 'Enter' });
+  // 正常作答
+  $('ans').value = s.queue[0].ko;
+  $('ans').onkeydown({ key: 'Enter' });
+  s = AppUI._getSession();
+  assert(s.correct === 1, '提醒后正常作答应算对');
+});

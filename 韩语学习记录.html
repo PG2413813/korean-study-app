@@ -99,6 +99,7 @@
   .fb { padding: 10px 13px; border-radius: 12px; font-size: 14px; margin-top: 12px; }
   .fb.ok { color: #1f6b43; background: #dff5e8; }
   .fb.no { color: #9a4326; background: #fbe6df; }
+  .fb.warn { color: #8a5b1f; background: #fdf3dd; }
   .center { text-align: center; }
   .modal-mask { position: fixed; inset: 0; background: rgba(20,40,34,.35); display: flex; align-items: center; justify-content: center; z-index: 50; }
   .modal { background: #fff; color:#223; border-radius: 16px; padding: 18px; width: 420px; max-width: 92vw; }
@@ -858,6 +859,12 @@ function renderQuestion() {
 }
 function submitAnswer(text) {
   if (!session || session.answered) return;
+  // 空输入：误触回车时提醒，不判错、不进错题库、不消耗题目
+  if (!AppCore.normalizeText(text)) {
+    var fbWarn = $('ans-fb');
+    if (fbWarn) fbWarn.innerHTML = '<div class="fb warn">⚠ 还没有输入答案哦，先写下你的答案再按回车</div>';
+    return;
+  }
   var item = session.queue[session.index];
   var answer = session.mode === 'zh2ko' ? item.ko : item.zh;
   var correct;
