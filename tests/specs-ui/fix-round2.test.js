@@ -204,3 +204,42 @@ test('问题4 一轮完成后返回首页会清除存档；再进复习页是设
   AppUI.navigate('review');
   assert(!!$('rv-start'), '再进复习页应显示设置页');
 });
+
+/* ===== 问题5：单词库与每日录入支持顺序/倒序显示 ===== */
+function firstKoInWords() {
+  var row = document.querySelector('#w-list .row .ko');
+  return row ? row.textContent : null;
+}
+function firstKoInAdd() {
+  var row = document.querySelector('#view-add .list .row .ko');
+  return row ? row.textContent : null;
+}
+
+test('问题5 单词库默认按录入顺序显示，切换后倒序', () => {
+  seedReviewable(3);
+  AppUI.navigate('words');
+  assert(firstKoInWords() === '단어0', '默认顺序第一行应为最早录入的 단어0，实际 ' + firstKoInWords());
+  $('w-order').onclick();
+  assert(firstKoInWords() === '단어2', '倒序后第一行应为最后录入的 단어2，实际 ' + firstKoInWords());
+});
+
+test('问题5 每日录入页今日已录列表同样支持顺序/倒序', () => {
+  seedState(AppCore.defaultState());
+  AppUI.addWord('가', '甲', []);
+  AppUI.addWord('나', '乙', []);
+  AppUI.addWord('다', '丙', []);
+  AppUI.navigate('add');
+  assert(firstKoInAdd() === '가', '默认顺序应为最早录入的 가，实际 ' + firstKoInAdd());
+  $('add-order').onclick();
+  assert(firstKoInAdd() === '다', '倒序后应为最后录入的 다，实际 ' + firstKoInAdd());
+});
+
+test('问题5 排序偏好持久化，重新加载后仍保留', () => {
+  seedReviewable(3);
+  AppUI.navigate('words');
+  $('w-order').onclick();
+  assert(firstKoInWords() === '단어2', '切换为倒序');
+  AppUI._reset(); // 模拟重新加载，从 localStorage 读 settings
+  AppUI.navigate('words');
+  assert(firstKoInWords() === '단어2', '重载后仍应保持倒序，实际 ' + firstKoInWords());
+});
