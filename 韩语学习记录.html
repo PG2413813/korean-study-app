@@ -372,6 +372,19 @@ function mergeEntry(existing, zh, tags) {
   return w;
 }
 
+// 查找与 item 中文释义有交集的所有单词（一个中文对应多个韩语）
+function findSynonymGroup(words, item) {
+  var target = splitMeanings(item.zh);
+  return (words || []).filter(function (w) {
+    if (w.id === item.id) return true;
+    var m = splitMeanings(w.zh);
+    for (var i = 0; i < m.length; i++) {
+      if (target.indexOf(m[i]) >= 0) return true;
+    }
+    return false;
+  });
+}
+
 globalThis.AppCore = {
   STORAGE_KEY: STORAGE_KEY,
   todayKey: todayKey,
@@ -389,7 +402,8 @@ globalThis.AppCore = {
   buildReviewQueue: buildReviewQueue,
   applyAnswer: applyAnswer,
   addWordEntry: addWordEntry,
-  mergeEntry: mergeEntry
+  mergeEntry: mergeEntry,
+  findSynonymGroup: findSynonymGroup
 };
 /* ==== CORE-END ==== */
 /* ==== UI-START ==== */
@@ -846,7 +860,16 @@ function submitAnswer(text) {
   if (!session || session.answered) return;
   var item = session.queue[session.index];
   var answer = session.mode === 'zh2ko' ? item.ko : item.zh;
-  var correct = AppCore.judgeAnswer(text, answer, session.mode);
+  var correct;
+  if (session.mode === 'zh2ko') {
+    // 一个中文可能对应多个韩语：与同义词组比较，任一韩语都算对
+    var group = AppCore.findSynonymGroup(state.words, item);
+    session._group = group;
+    var inp = AppCore.normalizeText(text);
+    correct = group.some(function (g) { return g.ko === inp; });
+  } else {
+    correct = AppCore.judgeAnswer(text, answer, session.mode);
+  }
   var wasError = !!item.isError;
   var updated = AppCore.applyAnswer(item, correct, today(), state.settings);
   updated.lastReviewedAt = today();
@@ -859,13 +882,17 @@ function submitAnswer(text) {
   session.answered = true;
   persist();
   var fb = $('ans-fb');
+  var showAnswer = answer;
+  if (session.mode === 'zh2ko' && session._group && session._group.length > 1) {
+    showAnswer = session._group.map(function (g) { return g.ko; }).join('、');
+  }
   if (correct) {
-    fb.innerHTML = '<div class="fb ok">✓ 答对了！自动进入下一题…</div>';
+    fb.innerHTML = '<div class="fb ok">✓ 答对了！' + (session._group && session._group.length > 1 ? '所有写法：<b>' + escapeHtml(showAnswer) + '</b>　' : '') + '自动进入下一题…</div>';
     // 答对：短暂展示反馈后自动进入下一题，无需再按回车
     clearTimeout(AppUI._autoNextTimer);
     AppUI._autoNextTimer = setTimeout(function () { AppUI.nextQuestion(); }, AppUI.AUTO_NEXT_DELAY);
   } else {
-    fb.innerHTML = '<div class="fb no">✗ 正确答案：<b>' + escapeHtml(answer) + '</b>（已加入错题）</div>';
+    fb.innerHTML = '<div class="fb no">✗ 正确答案：<b>' + escapeHtml(showAnswer) + '</b>（已加入错题）</div>';
     $('ans-next').classList.remove('hidden');
   }
 }
