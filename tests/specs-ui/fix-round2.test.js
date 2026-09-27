@@ -243,3 +243,49 @@ test('问题5 排序偏好持久化，重新加载后仍保留', () => {
   AppUI.navigate('words');
   assert(firstKoInWords() === '단어2', '重载后仍应保持倒序，实际 ' + firstKoInWords());
 });
+
+/* ===== 问题6：重复录入合并/跳过后的输入框行为 ===== */
+test('问题6 重复录入点合并：释义合并，输入框清空且焦点回到韩语框', () => {
+  seedState(AppCore.defaultState());
+  AppUI.navigate('add');
+  $('add-ko').value = '공부하다'; $('add-zh').value = '学习';
+  $('add-go').onclick();
+  // 再次录入相同韩语、不同释义 → 触发重复
+  $('add-ko').value = '공부하다'; $('add-zh').value = '学问';
+  $('add-go').onclick();
+  assert(!!$('add-merge'), '应显示合并按钮');
+  $('add-merge').onclick();
+  var w = AppUI._getState().words[0];
+  assert(w.zh.indexOf('学习') >= 0 && w.zh.indexOf('学问') >= 0, '释义应合并，实际：' + w.zh);
+  assert(AppUI._getState().words.length === 1, '合并不应新增词条');
+  assert(document.activeElement === $('add-ko'), '合并后焦点应在韩语框');
+  assert($('add-ko').value === '', '合并后韩语框应清空');
+});
+
+test('问题6 重复录入点跳过：不新增词，输入框清空且焦点回到韩语框', () => {
+  seedState(AppCore.defaultState());
+  AppUI.navigate('add');
+  $('add-ko').value = '공부하다'; $('add-zh').value = '学习';
+  $('add-go').onclick();
+  $('add-ko').value = '공부하다'; $('add-zh').value = '学问';
+  $('add-go').onclick();
+  assert(!!$('add-skip'), '应显示跳过按钮');
+  $('add-skip').onclick();
+  assert(AppUI._getState().words.length === 1, '跳过不应新增词条');
+  assert($('add-ko').value === '' && $('add-zh').value === '' && $('add-tags').value === '', '跳过应清空所有输入框');
+  assert(document.activeElement === $('add-ko'), '跳过焦点应在韩语框');
+});
+
+test('问题6 合并后可直接继续录入下一个新单词', () => {
+  seedState(AppCore.defaultState());
+  AppUI.navigate('add');
+  $('add-ko').value = '공부하다'; $('add-zh').value = '学习';
+  $('add-go').onclick();
+  $('add-ko').value = '공부하다'; $('add-zh').value = '学问';
+  $('add-go').onclick();
+  $('add-merge').onclick();
+  // 直接录入新词
+  $('add-ko').value = '사과'; $('add-zh').value = '苹果';
+  $('add-go').onclick();
+  assert(AppUI._getState().words.length === 2, '合并后可继续录入新词');
+});
