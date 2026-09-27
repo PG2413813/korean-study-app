@@ -860,11 +860,14 @@ function submitAnswer(text) {
   persist();
   var fb = $('ans-fb');
   if (correct) {
-    fb.innerHTML = '<div class="fb ok">✓ 答对了！</div>';
+    fb.innerHTML = '<div class="fb ok">✓ 答对了！自动进入下一题…</div>';
+    // 答对：短暂展示反馈后自动进入下一题，无需再按回车
+    clearTimeout(AppUI._autoNextTimer);
+    AppUI._autoNextTimer = setTimeout(function () { AppUI.nextQuestion(); }, AppUI.AUTO_NEXT_DELAY);
   } else {
     fb.innerHTML = '<div class="fb no">✗ 正确答案：<b>' + escapeHtml(answer) + '</b>（已加入错题）</div>';
+    $('ans-next').classList.remove('hidden');
   }
-  $('ans-next').classList.remove('hidden');
 }
 function nextQuestion() {
   if (!session) return;
@@ -995,6 +998,7 @@ function resetSettings() {
 
 /* ---------- 启动 ---------- */
 var AppUI = {
+  AUTO_NEXT_DELAY: 700, _autoNextTimer: null,
   navigate: navigate, boot: function () {
     applyTheme(curTheme());
     applyDailyBackground();

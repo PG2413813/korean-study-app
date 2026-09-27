@@ -118,7 +118,7 @@ function seedReviewable(n) {
   seedState({ version: 1, settings: { roundSize: 20, removeAfter: 3 }, studyLog: {}, words: words });
 }
 
-test('复习回车流：第一次回车提交答案，第二次回车进入下一题', () => {
+test('复习回车流：答对后自动进入下一题，无需第二次回车', () => {
   seedReviewable(3);
   AppUI.startReview('zh2ko');
   var s = AppUI._getSession();
@@ -126,12 +126,10 @@ test('复习回车流：第一次回车提交答案，第二次回车进入下�
   // 第一次回车：提交正确答案
   $('ans').value = s.queue[0].ko;
   $('ans').onkeydown({ key: 'Enter' });
-  assert(s.answered === true, '第一次回车后应已作答');
-  assert(!$('ans-next').classList.contains('hidden'), '作答后下一题按钮应显示');
-  assert($('ans-fb').textContent.indexOf('答对') >= 0, '应显示答对反馈');
-  // 第二次回车：直接进入下一题（无需鼠标点击按钮）
-  $('ans').onkeydown({ key: 'Enter' });
-  assert(s.index === 1 && s.answered === false, '第二次回车应进入第2题且重置为未作答');
+  assert(s.correct === 1, '答对应计入 correct');
+  // 同步触发自动进入下一题（测试环境将 setTimeout 视为同步）
+  if (AppUI._autoNextTimer) { AppUI.nextQuestion(); clearTimeout(AppUI._autoNextTimer); }
+  assert(s.index === 1 && s.answered === false, '答对后应自动进入第2题且重置为未作答');
 });
 
 test('复习回车流：答错后再按回车也能进入下一题', () => {
