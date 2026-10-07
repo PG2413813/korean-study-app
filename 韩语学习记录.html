@@ -373,16 +373,14 @@ function mergeEntry(existing, zh, tags) {
   return w;
 }
 
-// 查找与 item 中文释义有交集的所有单词（一个中文对应多个韩语）
+// 查找与 item 中文释义完全一致的单词（一个中文对应多个韩语）。
+// 规则：释义集合完全相同才算同义（顺序无关）；包含关系不算（A 译"1,2"、B 译"1"，则 A 与 B 不同义）。
 function findSynonymGroup(words, item) {
-  var target = splitMeanings(item.zh);
+  var target = splitMeanings(item.zh).slice().sort().join('|');
   return (words || []).filter(function (w) {
     if (w.id === item.id) return true;
-    var m = splitMeanings(w.zh);
-    for (var i = 0; i < m.length; i++) {
-      if (target.indexOf(m[i]) >= 0) return true;
-    }
-    return false;
+    var m = splitMeanings(w.zh).slice().sort().join('|');
+    return m === target;
   });
 }
 

@@ -62,7 +62,7 @@ test('问题1 答对自动推进到最后一题后显示小结', () => {
 });
 
 /* ===== 问题2：一个中文对应多个韩语单词，全部算对并给出所有韩语 ===== */
-test('问题2 核心：findSynonymGroup 按中文释义交集聚合同义词', () => {
+test('问题2 核心：findSynonymGroup 按中文释义完全一致聚合同义词', () => {
   var words = [
     { id: 'w1', ko: '공부하다', zh: '学习' },
     { id: 'w2', ko: '배우다', zh: '学习' },
@@ -373,4 +373,64 @@ test('问题3 无同义词题答对：仍自动进入下一题', () => {
   withSyncTimers(function () { $('ans').onkeydown({ key: 'Enter' }); });
   s = AppUI._getSession();
   assert(s.correct === 1 && s.index === 1, '无同义词应自动进入下一题');
+});
+
+/* ===== 问题4（2026-10-07）：同义判定改为释义完全一致；包含关系判错 ===== */
+test('问题4 核心：仅释义集合完全一致才聚合（包含关系不算，顺序无关）', () => {
+  var words = [
+    { id: 'a', ko: 'A', zh: '1,2' },
+    { id: 'b', ko: 'B', zh: '1' },
+    { id: 'c', ko: 'C', zh: '2,1' },
+    { id: 'd', ko: 'D', zh: '1,3' }
+  ];
+  var ga = AppCore.findSynonymGroup(words, words[0]);
+  var ids = ga.map(function (x) { return x.id; });
+  assert(ids.indexOf('a') >= 0 && ids.indexOf('c') >= 0, 'A(1,2) 应与 C(2,1) 同义（顺序无关），实际：' + ids.join(','));
+  assert(ids.indexOf('b') < 0, 'B(1) 是 A 的子集，不应同义');
+  assert(ids.indexOf('d') < 0, 'D(1,3) 与 A 有交集但不一致，不应同义');
+  assert(ga.length === 2, 'A 的同义词组应只含 A、C');
+  var gb = AppCore.findSynonymGroup(words, words[1]);
+  assert(gb.length === 1 && gb[0].id === 'b', 'B(1) 无完全一致同义词');
+});
+
+test('问题4 复习判定：题目 A(1,2) 输入子集词 B(1) 判错', () => {
+  seedState({
+    version: 1, settings: { roundSize: 20, removeAfter: 3 }, studyLog: {},
+    words: [
+      { id: 'a', ko: 'A', zh: '1,2', tags: [], createdAt: '2000-01-01', lastReviewedAt: null, isError: false, errorSince: null, correctStreak: 0 },
+      { id: 'b', ko: 'B', zh: '1', tags: [], createdAt: '2000-01-01', lastReviewedAt: null, isError: false, errorSince: null, correctStreak: 0 }
+    ]
+  });
+  AppUI.startReview('zh2ko');
+  var s = AppUI._getSession();
+  assert(s.queue[0].zh === '1,2', '第1题应为 A');
+  $('ans').value = 'B';
+  $('ans').onkeydown({ key: 'Enter' });
+  s = AppUI._getSession();
+  assert(s.wrong === 1 && s.correct === 0, '题目A(1,2)输入B(1)应判错');
+  // 答错后回车进入下一题（B）
+  $('ans').onkeydown({ key: 'Enter' });
+  s = AppUI._getSession();
+  assert(s.index === 1 && s.queue[1].zh === '1', '第2题应为 B');
+  $('ans').value = 'A';
+  $('ans').onkeydown({ key: 'Enter' });
+  s = AppUI._getSession();
+  assert(s.wrong === 2, '题目B(1)输入A(1,2)应判错');
+});
+
+test('问题4 复习判定：完全一致（顺序不同）的韩语互认，输入即对', () => {
+  seedState({
+    version: 1, settings: { roundSize: 20, removeAfter: 3 }, studyLog: {},
+    words: [
+      { id: 'a', ko: 'A', zh: '1,2', tags: [], createdAt: '2000-01-01', lastReviewedAt: null, isError: false, errorSince: null, correctStreak: 0 },
+      { id: 'c', ko: 'C', zh: '2,1', tags: [], createdAt: '2000-01-01', lastReviewedAt: null, isError: false, errorSince: null, correctStreak: 0 }
+    ]
+  });
+  AppUI.startReview('zh2ko');
+  var s = AppUI._getSession();
+  $('ans').value = 'C';
+  $('ans').onkeydown({ key: 'Enter' });
+  s = AppUI._getSession();
+  assert(s.correct === 1, '题目A(1,2)输入C(2,1)应判对');
+  assert(!!s._group && s._group.length === 2, '应识别同义词组');
 });
