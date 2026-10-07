@@ -587,3 +587,50 @@ test('功能3 看板：切换周视图重新渲染；无数据时显示提示', 
   AppUI.navigate('stats');
   assert($('stats-trend').textContent.indexOf('还没有学习数据') >= 0, '无数据应显示提示');
 });
+
+/* ===== 时间管理·功能4（2026-10-07）：历史记录与成长总结 ===== */
+test('功能4 核心：computeSummary 聚合累计学习数据', () => {
+  var log = {
+    '2026-09-01': { added: 3, reviewed: 0, correct: 0, seconds: 300 },
+    '2026-09-02': { added: 1, reviewed: 5, correct: 4, seconds: 600 },
+    '2026-09-03': { added: 0, reviewed: 0, correct: 0, seconds: 0 },
+    'not-a-date': { added: 9, reviewed: 9, correct: 9, seconds: 999 }
+  };
+  var s = AppCore.computeSummary(log);
+  assert(s.days === 2, '有效学习天数应为 2，实际 ' + s.days);
+  assert(s.added === 4, '累计新学应为 4，实际 ' + s.added);
+  assert(s.reviewed === 5 && s.correct === 4, '累计复习/正确应为 5/4');
+  assert(s.seconds === 900, '累计时长应为 900 秒');
+  assert(s.avgRate === 80, '平均掌握率应为 80%，实际 ' + s.avgRate);
+});
+
+test('功能4 核心：historyDays 过滤无记录日期并倒序', () => {
+  var log = {
+    '2026-09-01': { added: 2, reviewed: 0, correct: 0, seconds: 60 },
+    '2026-09-02': { added: 0, reviewed: 0, correct: 0, seconds: 0 },
+    '2026-09-03': { added: 0, reviewed: 4, correct: 3, seconds: 0 }
+  };
+  var h = AppCore.historyDays(log);
+  assert(h.length === 2, '应返回 2 条记录，实际 ' + h.length);
+  assert(h[0].date === '2026-09-03' && h[1].date === '2026-09-01', '应按日期倒序');
+  assert(h[0].rate === 75, '9/03 掌握率应为 75%');
+  assert(h[1].rate === null, '9/01 无复习掌握率应为 null');
+});
+
+test('功能4 看板：历史页渲染成长档案与记录列表', () => {
+  seedState(AppCore.defaultState());
+  AppUI._getState().studyLog['2026-09-01'] = { added: 2, reviewed: 0, correct: 0, seconds: 60 };
+  AppUI._getState().studyLog['2026-09-02'] = { added: 1, reviewed: 4, correct: 3, seconds: 300 };
+  AppUI.navigate('stats');
+  var txt = $('stats-history').textContent;
+  assert(txt.indexOf('成长档案') >= 0, '应有成长档案标题');
+  assert(txt.indexOf('学习天数') >= 0 && txt.indexOf('累计新学') >= 0, '应有累计卡片');
+  assert(txt.indexOf('2026-09-02') >= 0 && txt.indexOf('2026-09-01') >= 0, '应列出历史日期');
+  assert(txt.indexOf('掌握 75%') >= 0, '应显示掌握率');
+});
+
+test('功能4 看板：无历史记录时显示提示', () => {
+  seedState(AppCore.defaultState());
+  AppUI.navigate('stats');
+  assert($('stats-history').textContent.indexOf('还没有历史记录') >= 0, '无历史应显示提示');
+});

@@ -367,6 +367,45 @@ function computeTrend(studyLog, today, mode, span) {
   return out;
 }
 
+// 历史记录：筛选有学习痕迹的日期，倒序返回
+function historyDays(studyLog) {
+  var arr = [];
+  for (var k in studyLog) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) continue;
+    var d = studyLog[k] || {};
+    if ((d.added || 0) > 0 || (d.reviewed || 0) > 0 || (d.seconds || 0) > 0) {
+      var reviewed = d.reviewed || 0;
+      arr.push({
+        date: k,
+        added: d.added || 0,
+        reviewed: reviewed,
+        correct: d.correct || 0,
+        seconds: d.seconds || 0,
+        rate: reviewed > 0 ? Math.round(((d.correct || 0) / reviewed) * 100) : null
+      });
+    }
+  }
+  arr.sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+  return arr;
+}
+// 成长总结：累计学习天数/新学/复习/时长/平均掌握率
+function computeSummary(studyLog) {
+  var s = { days: 0, added: 0, reviewed: 0, correct: 0, seconds: 0, avgRate: null };
+  for (var k in studyLog) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) continue;
+    var d = studyLog[k] || {};
+    if ((d.added || 0) > 0 || (d.reviewed || 0) > 0 || (d.seconds || 0) > 0) {
+      s.days++;
+      s.added += d.added || 0;
+      s.reviewed += d.reviewed || 0;
+      s.correct += d.correct || 0;
+      s.seconds += d.seconds || 0;
+    }
+  }
+  s.avgRate = s.reviewed > 0 ? Math.round((s.correct / s.reviewed) * 100) : null;
+  return s;
+}
+
 function shuffled(arr, rand) {
   rand = rand || Math.random;
   var a = arr.slice();
@@ -482,7 +521,9 @@ globalThis.AppCore = {
   findSynonymGroup: findSynonymGroup,
   dayLog: dayLog,
   computeDayStats: computeDayStats,
-  computeTrend: computeTrend
+  computeTrend: computeTrend,
+  historyDays: historyDays,
+  computeSummary: computeSummary
 };
 /* ==== CORE-END ==== */
 /* ==== UI-START ==== */
@@ -1246,6 +1287,33 @@ function renderTrend() {
   for (var i = 0; i < btns.length; i++) btns[i].onclick = function () { trendMode = this.getAttribute('data-tm'); renderTrend(); };
 }
 
+function renderHistory() {
+  var box = $('stats-history');
+  if (!box) return;
+  var days = AppCore.historyDays(state.studyLog);
+  var sum = AppCore.computeSummary(state.studyLog);
+  if (!days.length) {
+    box.innerHTML = '<div class="tip" style="text-align:center;padding:12px 0">还没有历史记录，坚持每天学习吧 ✦</div>';
+    return;
+  }
+  var html = '<div class="chart-title">成长档案 · 累计</div>' +
+    '<div class="cards">' +
+      '<div class="card"><div class="num">' + sum.days + '</div><div class="lbl">学习天数</div></div>' +
+      '<div class="card"><div class="num">' + sum.added + '</div><div class="lbl">累计新学</div></div>' +
+      '<div class="card"><div class="num">' + sum.reviewed + '</div><div class="lbl">累计复习</div></div>' +
+      '<div class="card"><div class="num">' + fmtDuration(sum.seconds) + '</div><div class="lbl">累计时长</div></div>' +
+    '</div>' +
+    '<div class="chart-title">历史记录</div>' +
+    '<div class="list">' +
+      days.map(function (d) {
+        return '<div class="li"><div><b>' + d.date + '</b></div>' +
+          '<div class="sub">新学 ' + d.added + ' · 复习 ' + d.reviewed + ' · 正确 ' + d.correct +
+          ' · 掌握 ' + (d.rate === null ? '--' : d.rate + '%') + ' · ' + fmtDuration(d.seconds) + '</div></div>';
+      }).join('') +
+    '</div>';
+  box.innerHTML = html;
+}
+
 function renderStats() {
   var d = AppCore.computeDayStats(state.studyLog, today());
   var rateTxt = d.correctRate === null ? '--' : d.correctRate + '%';
@@ -1266,6 +1334,7 @@ function renderStats() {
     '<div id="stats-history"></div>';
   $('btn-timer-toggle').onclick = function () { if (timerRunning) AppUI.timerPause(); else AppUI.timerStart(); };
   renderTrend();
+  renderHistory();
 }
 function renderSettings() {
   $('view-settings').innerHTML =
