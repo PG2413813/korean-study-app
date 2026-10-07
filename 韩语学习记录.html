@@ -995,10 +995,17 @@ function submitAnswer(text) {
     showAnswer = session._group.map(function (g) { return g.ko; }).join('、');
   }
   if (correct) {
-    fb.innerHTML = '<div class="fb ok">✓ 答对了！' + (session._group && session._group.length > 1 ? '所有写法：<b>' + escapeHtml(showAnswer) + '</b>　' : '') + '自动进入下一题…</div>';
-    // 答对：短暂展示反馈后自动进入下一题，无需再按回车
-    clearTimeout(AppUI._autoNextTimer);
-    AppUI._autoNextTimer = setTimeout(function () { AppUI.nextQuestion(); }, AppUI.AUTO_NEXT_DELAY);
+    var hasSyn = session._group && session._group.length > 1;
+    if (hasSyn) {
+      // 有同义词：展示所有写法让用户确认，不自动跳，按回车/按钮进入下一题
+      fb.innerHTML = '<div class="fb ok">✓ 答对了！所有写法：<b>' + escapeHtml(showAnswer) + '</b>　按回车进入下一题</div>';
+      $('ans-next').classList.remove('hidden');
+    } else {
+      fb.innerHTML = '<div class="fb ok">✓ 答对了！自动进入下一题…</div>';
+      // 答对：短暂展示反馈后自动进入下一题，无需再按回车
+      clearTimeout(AppUI._autoNextTimer);
+      AppUI._autoNextTimer = setTimeout(function () { AppUI.nextQuestion(); }, AppUI.AUTO_NEXT_DELAY);
+    }
   } else {
     fb.innerHTML = '<div class="fb no">✗ 正确答案：<b>' + escapeHtml(showAnswer) + '</b>（已加入错题）</div>';
     $('ans-next').classList.remove('hidden');

@@ -337,3 +337,40 @@ test('问题2 中文框回车：韩语已填时正常提交并继续，焦点回
   assert(AppUI._getState().words.length === 1, '韩语已填应提交');
   assert(document.activeElement === $('add-ko'), '提交后焦点回韩语框');
 });
+
+/* ===== 问题3（2026-10-07）：有同义词时答对不自动跳，回车进入下一题 ===== */
+test('问题3 同义词题答对：不自动跳，展示所有写法，回车进入下一题', () => {
+  seedState({
+    version: 1, settings: { roundSize: 20, removeAfter: 3 }, studyLog: {},
+    words: [
+      { id: 'w1', ko: '공부하다', zh: '学习', tags: [], createdAt: '2000-01-01', lastReviewedAt: null, isError: false, errorSince: null, correctStreak: 0 },
+      { id: 'w2', ko: '배우다', zh: '学习', tags: [], createdAt: '2000-01-01', lastReviewedAt: null, isError: false, errorSince: null, correctStreak: 0 },
+      { id: 'w3', ko: '사과', zh: '苹果', tags: [], createdAt: '2000-01-01', lastReviewedAt: null, isError: false, errorSince: null, correctStreak: 0 }
+    ]
+  });
+  AppUI.startReview('zh2ko');
+  var s = AppUI._getSession();
+  $('ans').value = s.queue[0].ko;
+  withSyncTimers(function () { $('ans').onkeydown({ key: 'Enter' }); });
+  s = AppUI._getSession();
+  assert(s.correct === 1, '应判对');
+  assert(!!s._group && s._group.length === 2, '应识别同义词组');
+  assert(s.index === 0, '有同义词答对不应自动跳到下一题');
+  assert(!$('ans-next').classList.contains('hidden'), '应显示下一题按钮');
+  var fbText = $('ans-fb').textContent;
+  assert(fbText.indexOf('공부하다') >= 0 && fbText.indexOf('배우다') >= 0, '反馈应展示所有韩语写法，实际：' + fbText);
+  // 按回车进入下一题
+  $('ans').onkeydown({ key: 'Enter' });
+  s = AppUI._getSession();
+  assert(s.index === 1, '回车后应进入第2题');
+});
+
+test('问题3 无同义词题答对：仍自动进入下一题', () => {
+  seedReviewable(3);
+  AppUI.startReview('zh2ko');
+  var s = AppUI._getSession();
+  $('ans').value = s.queue[0].ko;
+  withSyncTimers(function () { $('ans').onkeydown({ key: 'Enter' }); });
+  s = AppUI._getSession();
+  assert(s.correct === 1 && s.index === 1, '无同义词应自动进入下一题');
+});
