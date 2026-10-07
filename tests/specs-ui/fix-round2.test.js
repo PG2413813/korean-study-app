@@ -289,3 +289,30 @@ test('问题6 合并后可直接继续录入下一个新单词', () => {
   $('add-go').onclick();
   assert(AppUI._getState().words.length === 2, '合并后可继续录入新词');
 });
+
+/* ===== 问题1（2026-10-07）：离开单词库超过5秒再进入，重置搜索词 ===== */
+test('问题1 离开单词库超过5秒再进入，搜索框重置为空', () => {
+  seedReviewable(3);
+  AppUI.navigate('words');
+  $('w-search').value = '단어1';
+  $('w-search').oninput();
+  assert($('w-search').value === '단어1', '已输入搜索词');
+  assert(AppUI._getState().words.filter(function (w) { return w.ko === '단어1'; }).length === 1, '搜索后列表有结果');
+  AppUI.navigate('home');
+  // 模拟时间前进6秒（超过5秒阈值）
+  AppUI._nowMs = function () { return Date.now() + 6000; };
+  AppUI.navigate('words');
+  assert($('w-search').value === '', '超过5秒再进入应重置搜索框');
+  assert(document.querySelectorAll('#w-list .row').length === 3, '重置后应显示全部单词');
+  AppUI._nowMs = function () { return Date.now(); };
+});
+
+test('问题1 5秒内返回单词库，保留搜索词', () => {
+  seedReviewable(3);
+  AppUI.navigate('words');
+  $('w-search').value = '단어1';
+  $('w-search').oninput();
+  AppUI.navigate('home');
+  AppUI.navigate('words'); // 立即返回
+  assert($('w-search').value === '단어1', '5秒内返回应保留搜索词');
+});

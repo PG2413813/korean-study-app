@@ -413,6 +413,7 @@ var onlyErrors = false;
 var session = null;
 var pendingDup = null;
 var searchQuery = '';
+var lastSearchAt = 0; // 搜索词最后修改时间戳，用于进入单词库时判断是否过期重置
 var activeTag = '全部';
 var wordsPage = 1;
 var WORDS_PAGE_SIZE = 50;
@@ -827,6 +828,8 @@ function renderWordPager(totalItems, totalPages) {
   $('pg-input').onkeydown = function (e) { if (e.key === 'Enter') goto(parseInt(this.value, 10)); };
 }
 function renderWords() {
+  // 离开单词库超过5秒后再进入：重置搜索词与页码，方便下一次查询
+  if (AppUI._nowMs() - lastSearchAt > 5000) { searchQuery = ''; wordsPage = 1; }
   var allTags = [];
   state.words.forEach(function (w) { w.tags.forEach(function (t) { if (allTags.indexOf(t) < 0) allTags.push(t); }); });
   var pills = '<button class="tag' + (activeTag === '全部' ? ' on' : '') + '" data-tag="全部">全部</button>' +
@@ -840,7 +843,7 @@ function renderWords() {
     '<div class="list" id="w-list"></div>' +
     '<div id="w-pager"></div>';
   // 只更新列表，不重建搜索框，保证输入法(IME)组合态与焦点不被打断
-  $('w-search').oninput = function () { searchQuery = this.value; wordsPage = 1; renderWordsList(); };
+  $('w-search').oninput = function () { searchQuery = this.value; lastSearchAt = AppUI._nowMs(); wordsPage = 1; renderWordsList(); };
   $('w-order').onclick = function () { AppUI.toggleWordsOrder(); };
   var tagBtns = document.querySelectorAll('#view-words [data-tag]');
   for (var i = 0; i < tagBtns.length; i++) {
@@ -1144,6 +1147,7 @@ var AppUI = {
   _getState: function () { return state; }, _getSession: function () { return session; },
   _setSession: function (s) { session = s; },
   _setOnlyErrors: function (v) { onlyErrors = !!v; },
+  _nowMs: function () { return Date.now(); },
   _reset: function () { state = AppCore.loadState(); searchQuery = ''; activeTag = '全部'; wordsPage = 1; navigate('home'); }
 };
 AppUI.boot();
