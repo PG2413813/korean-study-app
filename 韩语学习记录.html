@@ -741,7 +741,12 @@ function renderAdd() {
   $('add-go').onclick = doAddGo;
   $('add-order').onclick = function () { AppUI.toggleWordsOrder(); };
   $('add-ko').onkeydown = function (e) { if (e.key === 'Enter') $('add-zh').focus(); };
-  $('add-zh').onkeydown = function (e) { if (e.key === 'Enter') doAddGo(); };
+  // 中文框回车快捷方式：韩语框为空 → 跳到韩语框（先写中文再写韩语）；韩语已填 → 提交并继续
+  $('add-zh').onkeydown = function (e) {
+    if (e.key !== 'Enter') return;
+    if (!AppCore.normalizeText($('add-ko').value)) $('add-ko').focus();
+    else doAddGo();
+  };
   $('add-tags').onkeydown = function (e) { if (e.key === 'Enter') doAddGo(); };
   var delBtns = document.querySelectorAll('#view-add [data-del]');
   for (var i = 0; i < delBtns.length; i++) {

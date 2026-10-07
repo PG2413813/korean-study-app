@@ -316,3 +316,24 @@ test('问题1 5秒内返回单词库，保留搜索词', () => {
   AppUI.navigate('words'); // 立即返回
   assert($('w-search').value === '단어1', '5秒内返回应保留搜索词');
 });
+
+/* ===== 问题2（2026-10-07）：中文录入到韩文录入的快捷方式 ===== */
+test('问题2 中文框回车：韩语框为空时跳到韩语框（不提交）', () => {
+  seedState(AppCore.defaultState());
+  AppUI.navigate('add');
+  $('add-ko').value = '';
+  $('add-zh').value = '学习';
+  $('add-zh').onkeydown({ key: 'Enter' });
+  assert(AppUI._getState().words.length === 0, '韩语为空不应提交');
+  assert(document.activeElement === $('add-ko'), '应跳到韩语框');
+});
+
+test('问题2 中文框回车：韩语已填时正常提交并继续，焦点回韩语框', () => {
+  seedState(AppCore.defaultState());
+  AppUI.navigate('add');
+  $('add-ko').value = '공부하다';
+  $('add-zh').value = '学习';
+  $('add-zh').onkeydown({ key: 'Enter' });
+  assert(AppUI._getState().words.length === 1, '韩语已填应提交');
+  assert(document.activeElement === $('add-ko'), '提交后焦点回韩语框');
+});
