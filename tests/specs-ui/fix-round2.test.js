@@ -434,3 +434,66 @@ test('问题4 复习判定：完全一致（顺序不同）的韩语互认，输
   assert(s.correct === 1, '题目A(1,2)输入C(2,1)应判对');
   assert(!!s._group && s._group.length === 2, '应识别同义词组');
 });
+
+/* ===== 时间管理·功能1（2026-10-07）：学习计时器核心 ===== */
+test('功能1 核心：dayLog 对缺失字段补默认值，兼容旧备份', () => {
+  var log = { '2026-01-01': { added: 2 } };
+  var d = AppCore.dayLog(log, '2026-01-01');
+  assert(d.added === 2 && d.reviewed === 0 && d.correct === 0 && d.seconds === 0, '缺失字段应补0');
+  var e = AppCore.dayLog(log, '2026-01-02');
+  assert(e.added === 0, '无记录日期应全0');
+});
+
+test('功能1 核心：computeDayStats 掌握率=今日正确/今日复习', () => {
+  var log = { '2026-01-01': { added: 5, reviewed: 10, correct: 7, seconds: 600 } };
+  var st = AppCore.computeDayStats(log, '2026-01-01');
+  assert(st.reviewed === 10 && st.correctRate === 70, '掌握率应为70%，实际 ' + st.correctRate);
+  assert(st.seconds === 600 && st.added === 5, '时长与新学应正确');
+  var noReview = AppCore.computeDayStats({ '2026-01-02': { added: 1 } }, '2026-01-02');
+  assert(noReview.correctRate === null, '无复习时掌握率应为 null');
+});
+
+test('功能1 计时：启动后每秒累计今日时长并持久化', () => {
+  seedState(AppCore.defaultState());
+  AppUI.timerStart();
+  assert(AppUI._getTimerState().running === true, '启动后应处于计时状态');
+  AppUI._timerTick(); AppUI._timerTick(); AppUI._timerTick();
+  assert(AppUI._getTimerState().seconds === 3, '3个tick应累计3秒，实际 ' + AppUI._getTimerState().seconds);
+  var t = AppCore.todayKey();
+  assert(AppUI._getState().studyLog[t].seconds === 3, 'studyLog 今日应记录3秒');
+  AppUI.timerPause();
+  AppUI._timerTick();
+  assert(AppUI._getTimerState().seconds === 3, '暂停后 tick 不应再累计');
+});
+
+test('功能1 计时：闲置超时自动暂停（排除挂机）', () => {
+  seedState(AppCore.defaultState());
+  AppUI.timerStart();
+  // 模拟最后操作时间在很久以前（超过5分钟闲置阈值）
+  AppUI._setLastActive(Date.now() - AppUI.IDLE_LIMIT_MS - 1000);
+  AppUI._idleCheck();
+  assert(AppUI._getTimerState().running === false, '闲置超时应自动暂停');
+  AppUI.timerPause();
+});
+
+test('功能1 计时：页面切后台（visibilitychange hidden）自动暂停', () => {
+  seedState(AppCore.defaultState());
+  AppUI.timerStart();
+  var hiddenVal = true;
+  try {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: function () { return hiddenVal; } });
+    document.dispatchEvent(new window.Event('visibilitychange'));
+  } catch (e) {}
+  assert(AppUI._getTimerState().running === false, '切到后台应自动暂停');
+  AppUI.timerPause();
+});
+
+test('功能1 首页：显示今日学习时长面板与计时按钮', () => {
+  seedState(AppCore.defaultState());
+  var t = AppCore.todayKey();
+  AppUI._getState().studyLog[t] = { added: 1, reviewed: 0, correct: 0, seconds: 125 };
+  AppUI.navigate('home');
+  assert(!!$('btn-timer-toggle'), '应显示计时按钮');
+  assert($('timer-display') !== null && $('timer-display').textContent.indexOf('分') >= 0, '应显示时长，实际：' + ($('timer-display') && $('timer-display').textContent));
+  AppUI.timerPause();
+});

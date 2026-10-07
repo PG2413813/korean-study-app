@@ -290,6 +290,20 @@ function computeStats(words, studyLog, today) {
   return { newAdded: added, dueReview: due, errorCount: errors, totalWords: words.length, studyDays: consecutiveStudyDays(studyLog, today) };
 }
 
+// 取某天学习记录，字段缺失时补默认值（兼容旧备份数据）
+function dayLog(studyLog, date) {
+  date = date || todayKey();
+  var r = studyLog[date] || {};
+  return { added: r.added | 0, reviewed: r.reviewed | 0, correct: r.correct | 0, seconds: r.seconds | 0 };
+}
+
+// 单日统计：新学 / 复习 / 正确 / 时长 / 掌握率（正确÷复习，无复习时为 null）
+function computeDayStats(studyLog, date) {
+  var d = dayLog(studyLog, date);
+  var rate = d.reviewed > 0 ? Math.round((d.correct / d.reviewed) * 100) : null;
+  return { added: d.added, reviewed: d.reviewed, correct: d.correct, seconds: d.seconds, correctRate: rate };
+}
+
 function shuffled(arr, rand) {
   rand = rand || Math.random;
   var a = arr.slice();
@@ -402,7 +416,9 @@ globalThis.AppCore = {
   applyAnswer: applyAnswer,
   addWordEntry: addWordEntry,
   mergeEntry: mergeEntry,
-  findSynonymGroup: findSynonymGroup
+  findSynonymGroup: findSynonymGroup,
+  dayLog: dayLog,
+  computeDayStats: computeDayStats
 };
 /* ==== CORE-END ==== */
 /* ==== UI-START ==== */
@@ -476,15 +492,69 @@ function applyDailyIdol() {
     }
   });
 }
-function recAdded(n) {
+function ensureDayLog() {
   var t = today();
-  if (!state.studyLog[t]) state.studyLog[t] = { added: 0, reviewed: 0 };
-  state.studyLog[t].added += n;
+  if (!state.studyLog[t]) state.studyLog[t] = { added: 0, reviewed: 0, correct: 0, seconds: 0 };
+  return t;
 }
-function recReviewed() {
-  var t = today();
-  if (!state.studyLog[t]) state.studyLog[t] = { added: 0, reviewed: 0 };
-  state.studyLog[t].reviewed += 1;
+function recAdded(n) { var t = ensureDayLog(); state.studyLog[t].added = (state.studyLog[t].added || 0) + n; }
+function recReviewed() { var t = ensureDayLog(); state.studyLog[t].reviewed = (state.studyLog[t].reviewed || 0) + 1; }
+function recCorrect() { var t = ensureDayLog(); state.studyLog[t].correct = (state.studyLog[t].correct || 0) + 1; }
+
+/* ---------- 学习计时器（今日有效学习时长：排除后台挂机与闲置） ---------- */
+var timerRunning = false;
+var timerTickId = null;
+var timerIdleId = null;
+var lastActiveTs = 0;
+var timerTickCount = 0;
+var IDLE_LIMIT_MS = 5 * 60 * 1000; // 5分钟无操作视为闲置
+var IDLE_CHECK_MS = 30000;         // 每30秒检查一次闲置
+var TICK_PERSIST_EVERY = 5;        // 每5秒持久化一次
+
+function fmtDuration(totalSec) {
+  totalSec = totalSec | 0;
+  var h = Math.floor(totalSec / 3600), m = Math.floor((totalSec % 3600) / 60), s = totalSec % 60;
+  if (h > 0) return h + ' 小时 ' + String(m).padStart(2, '0') + ' 分';
+  if (m > 0) return m + ' 分 ' + String(s).padStart(2, '0') + ' 秒';
+  return s + ' 秒';
+}
+function timerTick() {
+  if (!timerRunning) return;
+  var t = ensureDayLog();
+  state.studyLog[t].seconds = (state.studyLog[t].seconds || 0) + 1;
+  timerTickCount++;
+  if (timerTickCount % TICK_PERSIST_EVERY === 0) persist();
+  updateTimerDisplay();
+}
+function timerStart() {
+  if (timerRunning) return;
+  ensureDayLog();
+  timerRunning = true;
+  lastActiveTs = Date.now();
+  if (!timerTickId) timerTickId = setInterval(timerTick, 1000);
+  if (!timerIdleId) timerIdleId = setInterval(idleCheck, IDLE_CHECK_MS);
+  renderAll();
+}
+function timerPause() {
+  if (!timerRunning) return;
+  timerRunning = false;
+  persist();
+  if (timerTickId) { clearInterval(timerTickId); timerTickId = null; }
+  if (timerIdleId) { clearInterval(timerIdleId); timerIdleId = null; }
+  renderAll();
+}
+function idleCheck() {
+  if (timerRunning && Date.now() - lastActiveTs > IDLE_LIMIT_MS) timerPause();
+}
+function updateTimerDisplay() {
+  var el = document.getElementById('timer-display');
+  if (el) el.textContent = fmtDuration(AppCore.dayLog(state.studyLog, today()).seconds);
+}
+function bindTimerEvents() {
+  ['mousemove', 'keydown', 'pointerdown', 'scroll'].forEach(function (ev) {
+    document.addEventListener(ev, function () { if (timerRunning) lastActiveTs = Date.now(); });
+  });
+  document.addEventListener('visibilitychange', function () { if (document.hidden) timerPause(); });
 }
 function updateWord(id, patch) {
   state.words = state.words.map(function (w) { return w.id === id ? Object.assign({}, w, patch) : w; });
@@ -628,6 +698,11 @@ function renderHome() {
       '<button class="btn primary" id="btn-start-review">开始今日复习</button>' +
       '<button class="btn" id="btn-open-errors">打开错题库</button>' +
     '</div>' +
+    '<div class="panel" style="text-align:center">' +
+      '<div class="stat-line">今日有效学习时长：<b id="timer-display">' + fmtDuration(AppCore.dayLog(state.studyLog, today()).seconds) + '</b></div>' +
+      '<button class="btn ' + (timerRunning ? '' : 'primary') + '" id="btn-timer-toggle">' + (timerRunning ? '⏸ 暂停计时' : '▶ 开始计时') + '</button>' +
+      '<div class="tip">计时仅在页面前台且有操作时累计，后台挂机、闲置 5 分钟自动暂停</div>' +
+    '</div>' +
     '<div class="home-extra">' +
       '<div class="panel" style="text-align:center"><div class="stat-line" style="margin-bottom:6px">今日小卡</div>' +
         '<div class="polaroid"><img id="home-idol" alt="아이돌" onerror="this.style.display=\'none\'"><div class="cap">오늘의 아이돌 ♡</div></div>' +
@@ -640,6 +715,7 @@ function renderHome() {
   $('qk-ko').onkeydown = function (e) { if (e.key === 'Enter') $('qk-zh').focus(); };
   $('qk-zh').onkeydown = function (e) { if (e.key === 'Enter') AppUI.quickAdd(); };
   $('btn-start-review').onclick = function () { navigate('review'); AppUI.startReview('zh2ko'); };
+  $('btn-timer-toggle').onclick = function () { if (timerRunning) AppUI.timerPause(); else AppUI.timerStart(); };
   $('btn-open-errors').onclick = function () { navigate('errors'); };
   var cards = document.querySelectorAll('#view-home .card[data-nav]');
   for (var i = 0; i < cards.length; i++) {
@@ -1143,6 +1219,7 @@ var AppUI = {
   navigate: navigate, boot: function () {
     applyTheme(curTheme());
     applyDailyBackground();
+    bindTimerEvents();
     var btns = document.querySelectorAll('#nav .nav-btn');
     for (var i = 0; i < btns.length; i++) {
       btns[i].onclick = (function (v) { return function () { navigate(v); }; })(btns[i].getAttribute('data-view'));
@@ -1158,7 +1235,12 @@ var AppUI = {
   _setSession: function (s) { session = s; },
   _setOnlyErrors: function (v) { onlyErrors = !!v; },
   _nowMs: function () { return Date.now(); },
-  _reset: function () { state = AppCore.loadState(); searchQuery = ''; activeTag = '全部'; wordsPage = 1; navigate('home'); }
+  timerStart: timerStart, timerPause: timerPause,
+  IDLE_LIMIT_MS: IDLE_LIMIT_MS,
+  _timerTick: timerTick, _idleCheck: idleCheck,
+  _setLastActive: function (ts) { lastActiveTs = ts; },
+  _getTimerState: function () { return { running: timerRunning, seconds: AppCore.dayLog(state.studyLog, today()).seconds }; },
+  _reset: function () { state = AppCore.loadState(); timerPause(); searchQuery = ''; activeTag = '全部'; wordsPage = 1; navigate('home'); }
 };
 AppUI.boot();
 /* ==== UI-END ==== */
