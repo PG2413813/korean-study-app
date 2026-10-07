@@ -497,3 +497,42 @@ test('功能1 首页：显示今日学习时长面板与计时按钮', () => {
   assert($('timer-display') !== null && $('timer-display').textContent.indexOf('分') >= 0, '应显示时长，实际：' + ($('timer-display') && $('timer-display').textContent));
   AppUI.timerPause();
 });
+
+/* ===== 时间管理·功能2（2026-10-07）：每日数据统计中心 ===== */
+test('功能2 复习答对：今日正确数 recorded，掌握率随之计算', () => {
+  seedReviewable(3);
+  AppUI.startReview('zh2ko');
+  var s = AppUI._getSession();
+  $('ans').value = s.queue[0].ko;
+  withSyncTimers(function () { $('ans').onkeydown({ key: 'Enter' }); });
+  var t = AppCore.todayKey();
+  var log = AppUI._getState().studyLog[t];
+  assert(log.reviewed === 1 && log.correct === 1, '复习1题答对应 reviewed=1 correct=1，实际 ' + JSON.stringify(log));
+});
+
+test('功能2 统计页：显示今日新学/复习/掌握率/时长四项数据', () => {
+  seedState(AppCore.defaultState());
+  var t = AppCore.todayKey();
+  AppUI._getState().studyLog[t] = { added: 3, reviewed: 10, correct: 7, seconds: 125 };
+  AppUI.navigate('stats');
+  var txt = $('view-stats').textContent;
+  assert(txt.indexOf('3') >= 0 && txt.indexOf('10') >= 0 && txt.indexOf('70%') >= 0, '应显示 3/10/70%，实际：' + txt);
+  assert(txt.indexOf('分') >= 0, '应显示时长');
+  assert(!!$('btn-timer-toggle'), '统计页应有计时按钮');
+});
+
+test('功能2 统计页：无复习时掌握率显示 --', () => {
+  seedState(AppCore.defaultState());
+  var t = AppCore.todayKey();
+  AppUI._getState().studyLog[t] = { added: 2, reviewed: 0, correct: 0, seconds: 0 };
+  AppUI.navigate('stats');
+  var txt = $('view-stats').textContent;
+  assert(txt.indexOf('--') >= 0, '无复习应显示 --，实际：' + txt);
+});
+
+test('功能2 导航：时间管理按钮可切换到统计页', () => {
+  seedState(AppCore.defaultState());
+  AppUI.navigate('stats');
+  assert(!$('view-stats').classList.contains('hidden'), '统计页应可见');
+  assert($('view-stats').textContent.indexOf('每日统计') >= 0, '应显示统计页标题');
+});

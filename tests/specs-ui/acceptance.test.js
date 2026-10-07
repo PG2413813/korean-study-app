@@ -20,7 +20,7 @@ test('验收1：打开默认进首页，6 项导航可切换', () => {
   seed(AppCore.defaultState());
   assert(!$('view-home').classList.contains('hidden'), '默认应显示首页');
   var btns = document.querySelectorAll('#nav .nav-btn');
-  assert(btns.length === 6, '6 个导航');
+  assert(btns.length === 7, '7 个导航');
   btns.forEach(function (b) {
     b.click();
     var v = b.getAttribute('data-view');

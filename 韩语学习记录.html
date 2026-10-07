@@ -149,6 +149,7 @@
       <button class="nav-btn" data-view="add">✏️ 每日学习录入</button>
       <button class="nav-btn" data-view="review">🔁 单词复习</button>
       <button class="nav-btn" data-view="errors">⭐ 错题库管理</button>
+      <button class="nav-btn" data-view="stats">📊 时间管理</button>
       <button class="nav-btn" data-view="settings">⚙️ 数据与设置</button>
     </nav>
     <div style="margin-top:auto;padding:14px 8px 4px;font-size:12px;opacity:.75">매일 조금씩<br>꾸준히 해요 ♡ 每天一点点</div>
@@ -160,6 +161,7 @@
     <section id="view-add" class="view hidden"></section>
     <section id="view-review" class="view hidden"></section>
     <section id="view-errors" class="view hidden"></section>
+    <section id="view-stats" class="view hidden"></section>
     <section id="view-settings" class="view hidden"></section>
   </main>
 </div>
@@ -615,7 +617,7 @@ function navigate(view) {
   for (var i = 0; i < btns.length; i++) {
     btns[i].classList.toggle('on', btns[i].getAttribute('data-view') === view);
   }
-  ['home', 'words', 'add', 'review', 'errors', 'settings'].forEach(function (v) {
+  ['home', 'words', 'add', 'review', 'errors', 'stats', 'settings'].forEach(function (v) {
     var el = $('view-' + v);
     if (el) el.classList.toggle('hidden', v !== view);
   });
@@ -628,6 +630,7 @@ function renderAll() {
   else if (currentView === 'add') renderAdd();
   else if (currentView === 'review') renderReviewEntry();
   else if (currentView === 'errors') renderErrors();
+  else if (currentView === 'stats') renderStats();
   else if (currentView === 'settings') renderSettings();
 }
 // 进入复习页：优先恢复进行中的复习，而不是重新开始
@@ -1056,7 +1059,7 @@ function submitAnswer(text) {
   updated.lastReviewedAt = today();
   updateWord(item.id, updated);
   recReviewed();
-  if (correct) { session.correct++; } else {
+  if (correct) { session.correct++; recCorrect(); } else {
     session.wrong++;
     if (!wasError) session.newErrors++;
   }
@@ -1130,6 +1133,26 @@ function renderErrors() {
 }
 
 /* ---------- 设置 ---------- */
+function renderStats() {
+  var d = AppCore.computeDayStats(state.studyLog, today());
+  var rateTxt = d.correctRate === null ? '--' : d.correctRate + '%';
+  $('view-stats').innerHTML =
+    '<h1 class="page-title">📊 时间管理 · 每日统计</h1>' +
+    '<div class="cards">' +
+      '<div class="card"><div class="num">' + d.added + '</div><div class="lbl">今日新学</div></div>' +
+      '<div class="card"><div class="num">' + d.reviewed + '</div><div class="lbl">今日复习</div></div>' +
+      '<div class="card"><div class="num">' + rateTxt + '</div><div class="lbl">单词掌握率</div></div>' +
+      '<div class="card"><div class="num">' + fmtDuration(d.seconds) + '</div><div class="lbl">有效学习时长</div></div>' +
+    '</div>' +
+    '<div class="panel" style="text-align:center">' +
+      '<div class="stat-line">今日有效学习：<b id="timer-display">' + fmtDuration(d.seconds) + '</b></div>' +
+      '<button class="btn ' + (timerRunning ? '' : 'primary') + '" id="btn-timer-toggle">' + (timerRunning ? '⏸ 暂停计时' : '▶ 开始计时') + '</button>' +
+      '<div class="tip">计时仅在页面前台且有操作时累计，后台挂机、闲置 5 分钟自动暂停</div>' +
+    '</div>' +
+    '<div id="stats-trend"></div>' +
+    '<div id="stats-history"></div>';
+  $('btn-timer-toggle').onclick = function () { if (timerRunning) AppUI.timerPause(); else AppUI.timerStart(); };
+}
 function renderSettings() {
   $('view-settings').innerHTML =
     '<h1 class="page-title">数据与设置</h1>' +

@@ -14,10 +14,10 @@ function baseWord(over) {
   }, over);
 }
 
-test('启动后默认进入首页，侧边栏 6 个导航齐全', () => {
+test('启动后默认进入首页，侧边栏 7 个导航齐全', () => {
   seed(AppCore.defaultState());
   assert(!$('view-home').classList.contains('hidden'), '首页应可见');
-  assert(document.querySelectorAll('#nav .nav-btn').length === 6, '应有 6 个导航');
+  assert(document.querySelectorAll('#nav .nav-btn').length === 7, '应有 7 个导航');
 });
 
 test('快捷录入后首页统计与持久化更新', () => {
