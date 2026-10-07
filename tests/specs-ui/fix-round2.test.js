@@ -536,3 +536,54 @@ test('功能2 导航：时间管理按钮可切换到统计页', () => {
   assert(!$('view-stats').classList.contains('hidden'), '统计页应可见');
   assert($('view-stats').textContent.indexOf('每日统计') >= 0, '应显示统计页标题');
 });
+
+/* ===== 时间管理·功能3（2026-10-07）：日/周/月数据可视化看板 ===== */
+test('功能3 核心：computeTrend 日视图聚合最近14天', () => {
+  var log = { '2026-09-30': { added: 2, reviewed: 5, correct: 3, seconds: 600 }, '2026-10-01': { added: 1, reviewed: 0, correct: 0, seconds: 0 } };
+  var t = AppCore.computeTrend(log, '2026-10-07', 'day', 14);
+  assert(t.length === 14, '应返回14天');
+  var d1 = t[t.length - 1];
+  assert(d1.label === '09-24', '最后一项为最早日期，实际 ' + d1.label);
+  assert(t[0].label === '10-07', '第一项为今天');
+  var found = null;
+  for (var i = 0; i < t.length; i++) { if (t[i].label === '09-30') { found = t[i]; break; } }
+  assert(found && found.added === 2 && found.reviewed === 5 && found.seconds === 600, '09-30 数据应正确');
+  var found2 = null;
+  for (var j = 0; j < t.length; j++) { if (t[j].label === '10-01') { found2 = t[j]; break; } }
+  assert(found2 && found2.added === 1, '10-01 数据应正确');
+});
+
+test('功能3 核心：computeTrend 周视图按周一聚合', () => {
+  // 2026-09-28 是周一；10-01 在 9/28 那一周
+  var log = { '2026-09-28': { added: 1, reviewed: 1, correct: 1, seconds: 60 }, '2026-10-01': { added: 2, reviewed: 0, correct: 0, seconds: 0 }, '2026-10-05': { added: 3, reviewed: 0, correct: 0, seconds: 0 } };
+  var t = AppCore.computeTrend(log, '2026-10-07', 'week', 2);
+  assert(t.length === 2, '应返回2周');
+  assert(t[0].added === 3, '本周（10/5起）应含 10-05 的3，实际 ' + t[0].added);
+  assert(t[1].added === 3, '上一周（9/28起）应聚合 9/28 的1 与 10/01 的2，实际 ' + t[1].added);
+});
+
+test('功能3 核心：computeTrend 月视图聚合最近N月', () => {
+  var log = { '2026-08-15': { added: 2, reviewed: 0, correct: 0, seconds: 0 }, '2026-09-20': { added: 4, reviewed: 2, correct: 1, seconds: 120 }, '2026-10-01': { added: 1, reviewed: 0, correct: 0, seconds: 0 } };
+  var t = AppCore.computeTrend(log, '2026-10-07', 'month', 3);
+  assert(t.length === 3, '应返回3个月');
+  assert(t[2].label === '2026-08' && t[2].added === 2, '8月应聚合 2，实际 ' + t[2].added);
+  assert(t[1].label === '2026-09' && t[1].added === 4 && t[1].reviewed === 2, '9月应聚合 4/2');
+  assert(t[0].label === '2026-10' && t[0].added === 1, '10月应聚合 1');
+});
+
+test('功能3 看板：有数据时渲染 SVG 柱状图与日/周/月切换', () => {
+  seedState(AppCore.defaultState());
+  var t = AppCore.todayKey();
+  AppUI._getState().studyLog[t] = { added: 2, reviewed: 3, correct: 2, seconds: 300 };
+  AppUI.navigate('stats');
+  assert($('stats-trend').innerHTML.indexOf('<svg') >= 0, '应渲染 SVG 图');
+  assert($('stats-trend').textContent.indexOf('新学') >= 0, '应有图表标题');
+  assert(!!$('stats-trend').querySelector('[data-tm="week"]'), '应有周切换按钮');
+  assert(!!$('stats-trend').querySelector('[data-tm="month"]'), '应有月切换按钮');
+});
+
+test('功能3 看板：切换周视图重新渲染；无数据时显示提示', () => {
+  seedState(AppCore.defaultState());
+  AppUI.navigate('stats');
+  assert($('stats-trend').textContent.indexOf('还没有学习数据') >= 0, '无数据应显示提示');
+});

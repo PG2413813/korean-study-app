@@ -107,6 +107,9 @@
   .modal label { display: block; font-size: 13px; color: #666; margin: 8px 0 3px; }
   .modal .modal-ops { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
   .switch { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+  .chart-title { font-size: 13px; font-weight: 700; color: var(--sub); margin: 14px 2px 4px; text-align: center; }
+  .tval { font-size: 10px; fill: var(--ink); opacity: .85; }
+  .tlab { font-size: 10px; fill: var(--sub); }
   .stat-line { font-size: 15px; line-height: 2; }
   .stat-line b { color: var(--accent); }
 
@@ -306,6 +309,64 @@ function computeDayStats(studyLog, date) {
   return { added: d.added, reviewed: d.reviewed, correct: d.correct, seconds: d.seconds, correctRate: rate };
 }
 
+function dateOffset(base, n) {
+  var d = new Date(base + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return todayKey(d);
+}
+function weekStartKey(base) {
+  var d = new Date(base + 'T00:00:00');
+  var wd = d.getDay(); // 0=周日
+  d.setDate(d.getDate() - (wd === 0 ? 6 : wd - 1)); // 周一起始
+  return todayKey(d);
+}
+function dateGt(a, b) { return new Date(a + 'T00:00:00') > new Date(b + 'T00:00:00'); }
+
+// 趋势聚合：day=最近N天 / week=最近N周（周一起始）/ month=最近N月
+function computeTrend(studyLog, today, mode, span) {
+  today = today || todayKey();
+  mode = mode || 'day';
+  span = span || ({ day: 14, week: 8, month: 12 }[mode] || 14);
+  var out = [];
+  function empty() { return { added: 0, reviewed: 0, seconds: 0 }; }
+  if (mode === 'day') {
+    for (var i = 0; i < span; i++) {
+      var ds = dateOffset(today, -i);
+      var d = dayLog(studyLog, ds);
+      out.push({ label: ds.slice(5), date: ds, added: d.added, reviewed: d.reviewed, seconds: d.seconds });
+    }
+  } else if (mode === 'week') {
+    var wkStart = weekStartKey(today);
+    for (var j = 0; j < span; j++) {
+      var start = dateOffset(wkStart, -j * 7);
+      var end = dateOffset(start, 6);
+      var agg = empty();
+      for (var dd = start; !dateGt(dd, end); dd = dateOffset(dd, 1)) {
+        var w = dayLog(studyLog, dd);
+        agg.added += w.added; agg.reviewed += w.reviewed; agg.seconds += w.seconds;
+      }
+      out.push({ label: start.slice(5) + ' 周', added: agg.added, reviewed: agg.reviewed, seconds: agg.seconds });
+    }
+  } else {
+    var curY = parseInt(today.slice(0, 4), 10), curM = parseInt(today.slice(5, 7), 10);
+    for (var k = 0; k < span; k++) {
+      var mIdx = curM - k;
+      var y = curY + Math.floor((mIdx - 1) / 12);
+      var m = ((mIdx - 1) % 12 + 12) % 12 + 1;
+      var key = y + '-' + String(m).padStart(2, '0');
+      var agg2 = empty();
+      for (var dayIn = 1; dayIn <= 31; dayIn++) {
+        var ds2 = key + '-' + String(dayIn).padStart(2, '0');
+        if (dateGt(ds2, today)) break;
+        var w2 = dayLog(studyLog, ds2);
+        agg2.added += w2.added; agg2.reviewed += w2.reviewed; agg2.seconds += w2.seconds;
+      }
+      out.push({ label: key, added: agg2.added, reviewed: agg2.reviewed, seconds: agg2.seconds });
+    }
+  }
+  return out;
+}
+
 function shuffled(arr, rand) {
   rand = rand || Math.random;
   var a = arr.slice();
@@ -420,7 +481,8 @@ globalThis.AppCore = {
   mergeEntry: mergeEntry,
   findSynonymGroup: findSynonymGroup,
   dayLog: dayLog,
-  computeDayStats: computeDayStats
+  computeDayStats: computeDayStats,
+  computeTrend: computeTrend
 };
 /* ==== CORE-END ==== */
 /* ==== UI-START ==== */
@@ -1133,6 +1195,57 @@ function renderErrors() {
 }
 
 /* ---------- 设置 ---------- */
+var trendMode = 'day';
+
+function svgBars(data, series) {
+  var W = 660, H = 205, padL = 36, padR = 12, padT = 26, padB = 34;
+  var maxV = 1;
+  data.forEach(function (x) {
+    series.forEach(function (s) { if (x[s.key] > maxV) maxV = x[s.key]; });
+  });
+  var iw = W - padL - padR, ih = H - padT - padB;
+  var n = data.length, slot = iw / n;
+  var groupW = Math.min(40, slot * 0.6);
+  var bw = groupW / series.length;
+  var rects = '', texts = '', labels = '';
+  data.forEach(function (x, i) {
+    var cx = padL + slot * i + slot / 2;
+    var gx = cx - groupW / 2;
+    series.forEach(function (s, j) {
+      var h = (x[s.key] / maxV) * ih;
+      rects += '<rect x="' + (gx + j * bw + 1) + '" y="' + (H - padB - h) + '" width="' + Math.max(2, bw - 2) + '" height="' + Math.max(0, h) + '" fill="' + s.color + '" rx="2"></rect>';
+      if (h > 0) texts += '<text x="' + (gx + j * bw + bw / 2) + '" y="' + (H - padB - h - 4) + '" text-anchor="middle" class="tval">' + x[s.key] + '</text>';
+    });
+    labels += '<text x="' + cx + '" y="' + (H - padB + 16) + '" text-anchor="middle" class="tlab">' + x.label + '</text>';
+  });
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto">' +
+    '<line x1="' + padL + '" y1="' + (H - padB) + '" x2="' + (W - padR) + '" y2="' + (H - padB) + '" stroke="var(--sub)" stroke-opacity=".35"></line>' +
+    rects + texts + labels + '</svg>';
+}
+
+function renderTrend() {
+  var box = $('stats-trend');
+  if (!box) return;
+  var data = AppCore.computeTrend(state.studyLog, today(), trendMode);
+  var has = data.some(function (x) { return x.added > 0 || x.reviewed > 0 || x.seconds > 0; });
+  var modeNames = { day: '日', week: '周', month: '月' };
+  var html = '<div class="toolbar" style="justify-content:center">' +
+    ['day', 'week', 'month'].map(function (m) {
+      return '<button class="pill' + (trendMode === m ? ' on' : '') + '" data-tm="' + m + '">' + modeNames[m] + '</button>';
+    }).join('') + '</div>';
+  if (has) {
+    html += '<div class="chart-title">新学（主色） vs 复习（浅色）</div>' +
+      svgBars(data, [{ key: 'added', color: 'var(--accent)' }, { key: 'reviewed', color: 'var(--accent2)' }]) +
+      '<div class="chart-title">学习时长（分钟）</div>' +
+      svgBars(data.map(function (x) { return { label: x.label, minutes: Math.round(x.seconds / 60) }; }), [{ key: 'minutes', color: 'var(--accent2)' }]);
+  } else {
+    html += '<div class="tip" style="text-align:center;padding:12px 0">还没有学习数据，去录入或复习吧 ✦</div>';
+  }
+  box.innerHTML = html;
+  var btns = box.querySelectorAll('[data-tm]');
+  for (var i = 0; i < btns.length; i++) btns[i].onclick = function () { trendMode = this.getAttribute('data-tm'); renderTrend(); };
+}
+
 function renderStats() {
   var d = AppCore.computeDayStats(state.studyLog, today());
   var rateTxt = d.correctRate === null ? '--' : d.correctRate + '%';
@@ -1152,6 +1265,7 @@ function renderStats() {
     '<div id="stats-trend"></div>' +
     '<div id="stats-history"></div>';
   $('btn-timer-toggle').onclick = function () { if (timerRunning) AppUI.timerPause(); else AppUI.timerStart(); };
+  renderTrend();
 }
 function renderSettings() {
   $('view-settings').innerHTML =

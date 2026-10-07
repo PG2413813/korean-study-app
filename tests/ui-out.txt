@@ -1,5 +1,5 @@
 ﻿SPEC acceptance.test.js
-  FAIL  验收1：打开默认进首页，6 项导航可切换  ->  6 个导航
+  PASS  验收1：打开默认进首页，6 项导航可切换
   PASS  验收2：单文件无外部资源（断网可运行）
   PASS  验收3-4：录入页与首页快捷录入均生效并联动
   PASS  验收5：重复录入提示，可跳过或合并
@@ -66,8 +66,17 @@ SPEC fix-round2.test.js
   PASS  功能1 计时：闲置超时自动暂停（排除挂机）
   PASS  功能1 计时：页面切后台（visibilitychange hidden）自动暂停
   PASS  功能1 首页：显示今日学习时长面板与计时按钮
+  PASS  功能2 复习答对：今日正确数 recorded，掌握率随之计算
+  PASS  功能2 统计页：显示今日新学/复习/掌握率/时长四项数据
+  PASS  功能2 统计页：无复习时掌握率显示 --
+  PASS  功能2 导航：时间管理按钮可切换到统计页
+  PASS  功能3 核心：computeTrend 日视图聚合最近14天
+  PASS  功能3 核心：computeTrend 周视图按周一聚合
+  PASS  功能3 核心：computeTrend 月视图聚合最近N月
+  PASS  功能3 看板：有数据时渲染 SVG 柱状图与日/周/月切换
+  PASS  功能3 看板：切换周视图重新渲染；无数据时显示提示
 SPEC stage3.test.js
-  FAIL  启动后默认进入首页，侧边栏 6 个导航齐全  ->  应有 6 个导航
+  PASS  启动后默认进入首页，侧边栏 7 个导航齐全
   PASS  快捷录入后首页统计与持久化更新
   PASS  重复录入返回 duplicate 状态
   PASS  单词库列表显示全部单词
@@ -80,4 +89,4 @@ SPEC stage3.test.js
   PASS  导出后导入可完整恢复
   PASS  导入损坏文件返回错误且不覆盖数据
 
-=== 75 通过, 2 失败 ===
+=== 86 通过, 0 失败 ===
