@@ -109,6 +109,7 @@ a { color: inherit; }
 .sidebar-foot {
   margin-top: auto; padding: 14px 8px 4px;
   font-size: 12px; opacity: .75; line-height: 1.6;
+  font-family: var(--font-ko);
 }
 
 /* ============ 主区 ============ */
@@ -132,6 +133,7 @@ a { color: inherit; }
   background: var(--grad);
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent;
+  font-family: var(--font-ko);
 }
 .topbar .gsub { font-size: var(--fs-sm); color: var(--sub); margin-top: 3px; }
 .topbar .date {
@@ -429,6 +431,7 @@ input::placeholder { color: var(--sub); opacity: .8; }
 .polaroid .cap {
   text-align: center; font-size: 12.5px; color: #5a8a72;
   margin-top: 8px; font-weight: var(--fw-bold);
+  font-family: var(--font-ko);
 }
 
 /* ============ 底部 Tab（手机） ============ */

@@ -59,9 +59,13 @@
   --blur-side: 28px;
   --sat: 180%;
 
-  /* —— 字体（旧版原样）—— */
+  /* —— 字体 ——
+     --font-sans 与旧版完全一致（拉丁走 system-ui、中文走 Microsoft YaHei），不动。
+     --font-ko 是**唯一有意偏离旧版**的地方：旧版没有这个变量，韩语跟着 system-ui 落到
+     Malgun Gothic，笔画偏粗、边缘发虚。改用 Noto Sans KR（可变字重，无合成加粗）后
+     明显清晰。没装的机器会依次回退到 Malgun Gothic / system-ui，不影响可用性。 */
   --font-sans: system-ui, -apple-system, "Malgun Gothic", "Microsoft YaHei", sans-serif;
-  --font-ko: "Malgun Gothic", system-ui, -apple-system, "Microsoft YaHei", sans-serif;
+  --font-ko: "Noto Sans KR", "Noto Sans CJK KR", "Malgun Gothic", system-ui, -apple-system, "Microsoft YaHei", sans-serif;
 
   /* —— 布局 —— */
   --sidebar-w: 200px;

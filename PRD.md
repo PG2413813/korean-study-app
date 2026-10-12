@@ -246,7 +246,10 @@
 - 背景层：`<div class="bg">` 必须是 `.app` 的**兄弟节点**（`.app` 用 `z-index:1` 压住背景），否则会改变玻璃采样到的背景、导致侧栏观感变浅。
 - 白色柔化罩 `linear-gradient(135deg, rgba(255,255,255,.55), rgba(255,255,255,.35))` **对所有主题生效（含深色）**，是既定观感，**不要改动**。
 - 圆角：卡片 22 / 面板 20 / 列表 18 / 侧栏 24 / 复习大卡 28；按钮 12；输入框 12。
-- 字体：`system-ui` + Malgun Gothic，基准 16px。
+- 字体：`--font-sans` 沿用 v1.0（`system-ui` → Malgun Gothic → Microsoft YaHei），基准 16px。
+  韩语另有 `--font-ko = "Noto Sans KR", "Noto Sans CJK KR", "Malgun Gothic", …`
+  —— 这是**唯一有意偏离 v1.0 的地方**：旧版韩语跟着 `system-ui` 落到 Malgun Gothic，笔画偏粗、边缘发虚；
+  改用 Noto Sans KR（可变字重，无合成加粗）后明显清晰，未安装该字体的机器会自动回退，不影响可用性。
 - 导航使用 emoji 图标；侧栏含 `.brand-mark` 圆点 logo 与落款「매일 조금씩 … 每天一点点」。
 - 主题变量 `--*` 挂在 `document.documentElement` 上 —— **弹窗是 Teleport 到 body 的**，挂在 `.app` 上会取不到渐变，导致主按钮变透明（白字压白底）。
 
