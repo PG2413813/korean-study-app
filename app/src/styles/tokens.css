@@ -1,0 +1,196 @@
+/* ============================================================
+   设计令牌 —— 与旧版单文件应用完全对齐
+   旧版只有 7 个变量（accent / accent2 / grad / ink / sub / sidebar-bg / shadow），
+   其余样式（玻璃、圆角、边框、阴影）都是写在各组件上的固定值。
+   这里把它整理成令牌，但**取值与旧版逐条一致**。
+
+   重要：旧版的背景遮罩（.bg::after）永远是白色渐变，
+   连深色主题也不例外 —— 正是这层白罩把照片柔化成浅色底，
+   再衬上深色玻璃卡片才清晰。之前把它"修"成真深色，反而导致看不清。
+   ============================================================ */
+
+:root {
+  /* —— 间距 —— */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 22px;
+  --sp-6: 30px;
+
+  /* —— 圆角（旧版取值）—— */
+  --r-input: 12px;
+  --r-btn: 12px;
+  --r-btn-sm: 9px;
+  --r-tag: 99px;
+  --r-modal: 16px;
+  --r-list: 18px;
+  --r-panel: 20px;
+  --r-card: 22px;
+  --r-topbar: 22px;
+  --r-sidebar: 24px;
+  --r-qcard: 28px;
+  --r-full: 999px;
+
+  /* —— 字号（旧版以 16px 为基准）—— */
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-base: 15px;
+  --fs-md: 15px;
+  --fs-lg: 17px;
+  --fs-xl: 20px;
+  --fs-2xl: 30px;
+  --fs-3xl: 46px;
+  --fs-q: 68px;
+
+  --fw-normal: 400;
+  --fw-medium: 400;
+  --fw-bold: 700;
+  --fw-black: 800;
+
+  /* —— 动效 —— */
+  --dur-1: 150ms;
+  --dur-2: 200ms;
+  --ease: ease;
+
+  /* —— 玻璃 —— */
+  --blur-card: 26px;
+  --blur-panel: 24px;
+  --blur-side: 28px;
+  --sat: 180%;
+
+  /* —— 字体（旧版原样）—— */
+  --font-sans: system-ui, -apple-system, "Malgun Gothic", "Microsoft YaHei", sans-serif;
+  --font-ko: "Malgun Gothic", system-ui, -apple-system, "Microsoft YaHei", sans-serif;
+
+  /* —— 布局 —— */
+  --sidebar-w: 200px;
+  --sidebar-w-rail: 74px;
+  --tabbar-h: 64px;
+  --content-max: 1180px;
+
+  /* —— 反馈色（旧版 .fb 硬编码值）—— */
+  --ok: #1f6b43;
+  --ok-soft: #dff5e8;
+  --warn: #8a5b1f;
+  --warn-soft: #fdf3dd;
+  --err: #9a4326;
+  --err-soft: #fbe6df;
+  --info: #2f6f9e;
+  --info-soft: #e3f0fa;
+  --danger-solid: #c96a4a;
+}
+
+/* ===== 主题：淡绿（默认）===== */
+[data-theme="green"] {
+  --accent: #3fae7e;
+  --accent2: #7fd6ab;
+  --grad: linear-gradient(135deg, #6fd6a4, #33a878);
+  --ink: #24463a;
+  --sub: #6f9384;
+  --sidebar-bg: rgba(22, 58, 44, .45);
+  --shadow: rgba(40, 110, 80, .16);
+
+  --accent-deep: #3fae7e;
+  --accent-soft: rgba(255, 255, 255, .55);
+  --accent-ring: rgba(63, 174, 126, .35);
+
+  --surface: rgba(255, 255, 255, .55);
+  --surface-2: rgba(255, 255, 255, .4);
+  --surface-3: rgba(255, 255, 255, .5);
+  --glass-border: rgba(255, 255, 255, .7);
+  --glass-border-soft: rgba(255, 255, 255, .6);
+  --topbar-bg: rgba(255, 255, 255, .5);
+  --topbar-border: rgba(255, 255, 255, .65);
+  --list-bg: rgba(255, 255, 255, .45);
+  --line: rgba(127, 127, 127, .1);
+  --line-2: rgba(127, 127, 127, .1);
+  --faint: #6f9384;
+  --pill-date-bg: rgba(255, 255, 255, .6);
+}
+
+/* ===== 主题：淡蓝 ===== */
+[data-theme="blue"] {
+  --accent: #3d8fd0;
+  --accent2: #8ecbf0;
+  --grad: linear-gradient(135deg, #7cc4f0, #3d8fd0);
+  --ink: #243c52;
+  --sub: #6f8aa3;
+  --sidebar-bg: rgba(24, 52, 76, .45);
+  --shadow: rgba(40, 80, 120, .16);
+
+  --accent-deep: #3d8fd0;
+  --accent-soft: rgba(255, 255, 255, .55);
+  --accent-ring: rgba(61, 143, 208, .35);
+
+  --surface: rgba(255, 255, 255, .55);
+  --surface-2: rgba(255, 255, 255, .4);
+  --surface-3: rgba(255, 255, 255, .5);
+  --glass-border: rgba(255, 255, 255, .7);
+  --glass-border-soft: rgba(255, 255, 255, .6);
+  --topbar-bg: rgba(255, 255, 255, .5);
+  --topbar-border: rgba(255, 255, 255, .65);
+  --list-bg: rgba(255, 255, 255, .45);
+  --line: rgba(127, 127, 127, .1);
+  --line-2: rgba(127, 127, 127, .1);
+  --faint: #6f8aa3;
+  --pill-date-bg: rgba(255, 255, 255, .6);
+}
+
+/* ===== 主题：浅色 ===== */
+[data-theme="light"] {
+  --accent: #4a6b8a;
+  --accent2: #9fb4c6;
+  --grad: linear-gradient(135deg, #6d8aa6, #3f5a75);
+  --ink: #2b3a4a;
+  --sub: #6b7d8d;
+  --sidebar-bg: #2f3f4f;
+  --shadow: rgba(40, 50, 60, .12);
+
+  --accent-deep: #4a6b8a;
+  --accent-soft: rgba(255, 255, 255, .55);
+  --accent-ring: rgba(74, 107, 138, .35);
+
+  --surface: rgba(255, 255, 255, .55);
+  --surface-2: rgba(255, 255, 255, .4);
+  --surface-3: rgba(255, 255, 255, .5);
+  --glass-border: rgba(255, 255, 255, .7);
+  --glass-border-soft: rgba(255, 255, 255, .6);
+  --topbar-bg: rgba(255, 255, 255, .5);
+  --topbar-border: rgba(255, 255, 255, .65);
+  --list-bg: rgba(255, 255, 255, .45);
+  --line: rgba(127, 127, 127, .1);
+  --line-2: rgba(127, 127, 127, .1);
+  --faint: #6b7d8d;
+  --pill-date-bg: rgba(255, 255, 255, .6);
+}
+
+/* ===== 主题：深色 ===== */
+/* 注意：背景遮罩仍然沿用旧版的白色柔化（见 base.css 的 .bg::after），
+   这不是 bug，是旧版的既定观感 —— 浅底 + 深玻璃卡，对比才够。 */
+[data-theme="dark"] {
+  --accent: #6fd6a4;
+  --accent2: #9be0c4;
+  --grad: linear-gradient(135deg, #56b88f, #2f8a66);
+  --ink: #e6f0ea;
+  --sub: #9fb4aa;
+  --sidebar-bg: rgba(16, 24, 28, .6);
+  --shadow: rgba(0, 0, 0, .45);
+
+  --accent-deep: #6fd6a4;
+  --accent-soft: rgba(60, 80, 88, .6);
+  --accent-ring: rgba(111, 214, 164, .4);
+
+  --surface: rgba(40, 52, 58, .55);
+  --surface-2: rgba(40, 52, 58, .4);
+  --surface-3: rgba(60, 80, 88, .6);
+  --glass-border: rgba(255, 255, 255, .15);
+  --glass-border-soft: rgba(255, 255, 255, .12);
+  --topbar-bg: rgba(36, 48, 54, .5);
+  --topbar-border: rgba(255, 255, 255, .12);
+  --list-bg: rgba(30, 42, 48, .45);
+  --line: rgba(127, 127, 127, .18);
+  --line-2: rgba(127, 127, 127, .18);
+  --faint: #9fb4aa;
+  --pill-date-bg: rgba(36, 48, 54, .6);
+}

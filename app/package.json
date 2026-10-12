@@ -1,0 +1,28 @@
+{
+  "name": "han-study-app",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
+  "description": "韩语学习记录 App · Vue 3 重写版（构建产物为单个 HTML，双击即用、离线可用）",
+  "scripts": {
+    "manifest": "node scripts/gen-manifest.mjs",
+    "dev": "npm run manifest && vite",
+    "build": "npm run manifest && vite build && node scripts/postbuild.mjs",
+    "check": "node scripts/check-core.mjs",
+    "style": "node scripts/style-check.mjs",
+    "features": "node scripts/features-check.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "flow": "node scripts/flow.mjs",
+    "verify": "npm run check && npm run style && npm run smoke && npm run flow && npm run features && npm run browser",
+    "browser": "node scripts/browser-check.mjs"
+  },
+  "dependencies": {
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "puppeteer-core": "^25.13.0",
+    "vite": "^6.0.7",
+    "vite-plugin-singlefile": "^2.1.0"
+  }
+}

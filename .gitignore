@@ -19,3 +19,24 @@ backgrounds/*.jpeg
 backgrounds/*.png
 backgrounds/*.gif
 backgrounds/*.webp
+
+# 项目内部记录（含开发笔记与个人使用情况，不公开）
+.workbuddy/
+
+# 待清理的回收站
+_回收站_*/
+
+# 构建与测试产物（可重新生成）
+app/dist/
+.shots/
+
+# 图片清单由 npm run manifest 扫描本地 backgrounds/ 生成，
+# 内容是你本地素材的文件名，不入库
+app/src/assets/backgrounds.gen.js
+
+# 自动化测试临时页面
+_visual-*.html
+
+# 依赖与调试
+node_modules/
+package-lock.json.bak

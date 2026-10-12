@@ -4,7 +4,9 @@ const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
 
-const htmlPath = path.join(__dirname, '..', '韩语学习记录.html');
+// 这套 UI 测试是为 v1 单文件版写的，指向备份中的 v1 原始文件。
+// 需要指向其它文件时用环境变量 HAN_HTML 覆盖。
+const htmlPath = process.env.HAN_HTML || path.join(__dirname, '..', 'backup', '韩语学习记录-v1-原始版.html');
 const html = fs.readFileSync(htmlPath, 'utf8');
 
 const dom = new JSDOM(html, { url: 'http://localhost/', runScripts: 'outside-only', pretendToBeVisual: true });
