@@ -31,7 +31,7 @@ function submit() {
     const dup = res.existing
     confirmDialog({
       title: '该单词已存在',
-      text: `${dup.ko} = ${dup.zh}。合并会把新释义和标签补进去，不改动录入日期与复习进度。`,
+      text: `${dup.ko} = ${dup.zh}。合并会把新释义和标签补进去，并计入今天的新录入；复习进度保留。`,
       confirmText: '合并释义到已有',
       onConfirm: () => {
         mergeEntry(dup.id, zh.value, splitMeanings(tags.value))

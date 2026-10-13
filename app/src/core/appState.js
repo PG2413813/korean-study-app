@@ -161,11 +161,25 @@ export function addWord(ko, zh, tags) {
   return { status: 'added' }
 }
 
+/**
+ * 合并录入时重复的单词。
+ * 按用户要求：**合并后的词算作「今天的新录入」** —— 录入日期改到今天、今日新录入 +1，
+ * 于是它会出现在录入页的「今日已录」清单里，并与其他新词一样从明天进入复习池。
+ * 若该词本来就是今天录的，则只合并释义，不重复计数。
+ * 注意：只改 createdAt，不动 lastReviewedAt / isError / correctStreak，复习进度保留。
+ */
 export function mergeEntry(id, zh, tags) {
   const w = findWord(id)
   if (!w) return
+  const t = today()
   const merged = C.mergeEntry(w, zh, tags || [])
+  const alreadyToday = w.createdAt === t
+  if (!alreadyToday) merged.createdAt = t
   updateWord(id, merged)
+  if (!alreadyToday) {
+    recAdded(1)
+    persist()
+  }
 }
 
 /** 删除单词。若该词是今天录的，同步把今日录入数减 1（与旧版一致） */

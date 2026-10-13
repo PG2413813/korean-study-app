@@ -265,6 +265,81 @@ console.log('— 4b. 到期自动删除（只保留今天与昨天）—')
   check(dates.length === 2, '当前共保留 2 份', dates.join('、'))
 }
 
+/* ================= 5. 合并录入计入今日新录入 ================= */
+console.log('')
+console.log('— 5. 合并后的单词计入「今日新录入」—')
+{
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms))
+  const { window: w, document, errors } = await boot()
+  navTo(w, document, '每日学习录入')
+  await wait(500)
+
+  // 种子：w1 = 공부하다（今天录的）、w2 = 날씨（昨天录的）
+  check(document.querySelectorAll('.list .row').length === 1, '合并前「今日已录」只有 1 条')
+
+  // 录入一个「昨天录过」的词 → 触发重复
+  const ins = [...document.querySelectorAll('.page .panel.toolbar input')]
+  ins[0].value = '날씨'
+  ins[0].dispatchEvent(new w.Event('input', { bubbles: true }))
+  ins[1].value = '气候'
+  ins[1].dispatchEvent(new w.Event('input', { bubbles: true }))
+  await wait(80)
+  click(w, byText(document, '.page .btn.primary', '添加'))
+  await wait(400)
+
+  check(modalTitle(document) === '该单词已存在', '弹出「该单词已存在」', modalTitle(document))
+  const mergeBtn = modalButtons(document).find((b) => b.textContent.includes('合并'))
+  check(!!mergeBtn, '弹窗里有「合并」按钮')
+
+  if (mergeBtn) {
+    click(w, mergeBtn)
+    await wait(400)
+
+    const saved = JSON.parse(w.localStorage.getItem('hanStudyApp.v1'))
+    const log = saved.studyLog[TODAY] || {}
+    const merged = saved.words.find((x) => x.id === 'w2')
+
+    check((log.added || 0) === 1, '今日新录入 +1（实际 added=' + (log.added || 0) + '）')
+    check(!!merged && merged.createdAt === TODAY,
+      '被合并的词录入日期改为今天（实际 ' + (merged && merged.createdAt) + '）')
+    check(!!merged && merged.zh.indexOf('气候') >= 0,
+      '新释义已合并进去（' + (merged && merged.zh) + '）')
+    check(document.querySelectorAll('.list .row').length === 2,
+      '合并后出现在「今日已录」清单里（' + document.querySelectorAll('.list .row').length + ' 条）')
+  }
+  check(errors.length === 0, '运行期间无报错', errors.slice(0, 2).join(' | '))
+}
+
+console.log('')
+console.log('— 5b. 合并「今天已录」的词不重复计数 —')
+{
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms))
+  const { window: w, document } = await boot()
+  navTo(w, document, '每日学习录入')
+  await wait(500)
+
+  const ins = [...document.querySelectorAll('.page .panel.toolbar input')]
+  ins[0].value = '공부하다' // w1，本身就是今天录的
+  ins[0].dispatchEvent(new w.Event('input', { bubbles: true }))
+  ins[1].value = '用功'
+  ins[1].dispatchEvent(new w.Event('input', { bubbles: true }))
+  await wait(80)
+  click(w, byText(document, '.page .btn.primary', '添加'))
+  await wait(400)
+
+  const mergeBtn = modalButtons(document).find((b) => b.textContent.includes('合并'))
+  check(!!mergeBtn, '今天已录的词再次录入同样提示重复')
+  if (mergeBtn) {
+    click(w, mergeBtn)
+    await wait(400)
+    const saved = JSON.parse(w.localStorage.getItem('hanStudyApp.v1'))
+    const log = saved.studyLog[TODAY] || {}
+    const w1 = saved.words.find((x) => x.id === 'w1')
+    check((log.added || 0) === 0, '本来就是今天录的 → 不重复计数（实际 added=' + (log.added || 0) + '）')
+    check(!!w1 && w1.zh.indexOf('用功') >= 0, '释义仍正常合并（' + (w1 && w1.zh) + '）')
+  }
+}
+
 console.log('')
 closeAll()
 console.log(failCount === 0
