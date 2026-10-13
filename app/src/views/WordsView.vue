@@ -51,7 +51,15 @@ const pageNumbers = computed(() => {
 })
 
 function touch() { lastTouchedAt = Date.now() }
-function onSearch() { touch(); page.value = 1 }
+/* 搜索：直接读 DOM 的值，而不是只依赖 v-model。
+   原因：Vue 的 v-model 会跳过「输入法组字中」的 input 事件（要等候选词上屏才同步），
+   而韩语输入法的最后一个音节会一直停留在组字状态 —— 结果就是必须按空格/回车
+   让候选上屏，搜索才会触发。这里读 e.target.value 就能做到边打字边筛选。 */
+function onSearchInput(e) {
+  searchQuery.value = e.target.value
+  touch()
+  page.value = 1
+}
 function pickTag(t) { touch(); activeTag.value = t; page.value = 1 }
 
 function statusOf(w) {
@@ -80,7 +88,7 @@ function askDelete(w) {
       <input
         v-model="searchQuery" class="search-input"
         placeholder="搜索韩语或中文" style="flex:1;min-width:180px"
-        @input="onSearch"
+        @input="onSearchInput"
       >
     </div>
 

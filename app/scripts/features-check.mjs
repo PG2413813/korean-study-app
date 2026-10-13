@@ -340,6 +340,45 @@ console.log('— 5b. 合并「今天已录」的词不重复计数 —')
   }
 }
 
+/* ================= 6. 搜索：输入法组字期间也实时筛选 ================= */
+/* Vue 的 v-model 会跳过「组字中」的 input 事件（等候选上屏才同步）。
+   韩语输入法的最后一个音节一直处于组字状态，因此必须按空格/回车才会触发筛选。
+   期望：组字过程中列表就跟着变。 */
+console.log('')
+console.log('— 6. 单词库搜索：输入法组字过程中也实时筛选 —')
+{
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms))
+  const { window: w, document } = await boot()
+  navTo(w, document, '单词库')
+  await wait(500)
+
+  const input = document.querySelector('input[placeholder*="搜索"]')
+  check(!!input, '找到搜索框')
+  const rows = () => document.querySelectorAll('.list .row').length
+  check(rows() === 2, '初始显示全部 2 条（实际 ' + rows() + '）')
+
+  if (input) {
+    // 模拟输入法组字：compositionstart → input(isComposing=true)
+    input.dispatchEvent(new w.CompositionEvent('compositionstart', { bubbles: true }))
+    input.value = '天气'
+    input.dispatchEvent(new w.InputEvent('input', { bubbles: true, isComposing: true, data: '天气' }))
+    await wait(200)
+    check(rows() === 1, '组字期间就按「天气」筛选为 1 条（实际 ' + rows() + '）')
+
+    // 候选上屏
+    input.dispatchEvent(new w.CompositionEvent('compositionend', { bubbles: true, data: '天气' }))
+    input.dispatchEvent(new w.InputEvent('input', { bubbles: true, isComposing: false, data: '天气' }))
+    await wait(200)
+    check(rows() === 1, '上屏后仍为 1 条（实际 ' + rows() + '）')
+
+    // 清空恢复
+    input.value = ''
+    input.dispatchEvent(new w.InputEvent('input', { bubbles: true, data: '' }))
+    await wait(200)
+    check(rows() === 2, '清空后恢复 2 条（实际 ' + rows() + '）')
+  }
+}
+
 console.log('')
 closeAll()
 console.log(failCount === 0
