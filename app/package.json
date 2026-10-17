@@ -13,7 +13,8 @@
     "features": "node scripts/features-check.mjs",
     "smoke": "node scripts/smoke.mjs",
     "flow": "node scripts/flow.mjs",
-    "verify": "npm run check && npm run style && npm run smoke && npm run flow && npm run features && npm run browser",
+    "review": "node scripts/review-check.mjs",
+    "verify": "npm run check && npm run style && npm run smoke && npm run flow && npm run review && npm run features && npm run browser",
     "browser": "node scripts/browser-check.mjs"
   },
   "dependencies": {

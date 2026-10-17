@@ -6,10 +6,12 @@
  *   方式：type（打字）/ choice（四选一）/ flash（闪卡自评）
  * 旧版的两种模式在这里等价于 方向 × type，行为完全保留。
  *
- * 答题节奏（本次按需求调整）：
- *   答错后 —— 按回车 = 重做本题（重新输入 / 重新选择），也可点「下一题」跳过；
- *   点过「我答对了」申诉后 —— 按回车 = 进入下一题；
- *   答对后 —— 无同义词时按设置自动跳转，也可按回车立即进入下一题。
+ * 答题节奏（用户 2026-10-17 确认）：
+ *   答对 —— 有同义词时展示所有写法、等用户按回车；无同义词则按设置自动进入下一题。
+ *   答错 —— **不提供「下一题」，必须重做到答对才能继续**；
+ *           按回车 = 重做本题（清空输入 / 恢复选项），重做的答案**会真正判题**；
+ *           重做又答错 → 提示「再试一次」，可以继续重做。
+ *   申诉 —— 点过「我答对了」后按回车 = 进入下一题。
  * 重做不会重复计入统计，也不会二次改动单词状态（错题标记只记第一次）。
  */
 import { ref, computed } from 'vue'
@@ -259,20 +261,27 @@ export function submitTyped(text) {
   const hasSyn = s.dir === 'zh2ko' && C.findSynonymGroup(state.words, item).length > 1
 
   if (correct) {
-    if (isRetry) {
-      feedback.value = { kind: 'ok', text: '这次答对了！', manual: true }
-    } else if (hasSyn) {
-      feedback.value = { kind: 'ok', text: '答对了！所有写法：', strong: answerText.value, manual: true }
+    // 重做答对与首次答对走同一套节奏：
+    // 有同义词 → 展示所有写法并等回车；无同义词 → 按设置自动进入下一题
+    if (hasSyn) {
+      feedback.value = {
+        kind: 'ok',
+        text: (isRetry ? '这次答对了！' : '答对了！') + '所有写法：',
+        strong: answerText.value,
+        manual: true
+      }
     } else {
-      feedback.value = { kind: 'ok', text: '答对了！', manual: false }
+      feedback.value = { kind: 'ok', text: isRetry ? '这次答对了！' : '答对了！', manual: false }
       scheduleAutoNext()
     }
+    if (isRetry) s.retrying = false // 答对即结束重做：输入框禁用、回车进入下一题
   } else {
+    // 答错不提供「下一题」入口 —— 必须重做到答对才能继续
     feedback.value = {
       kind: 'no',
       text: '正确答案：',
       strong: answerText.value,
-      manual: true,
+      manual: false,
       note: isRetry ? '再试一次？' : '已加入错题库',
       appealable: !isRetry,
       retryHint: true
@@ -298,16 +307,17 @@ export function chooseOption(index) {
   saveStorage()
 
   if (isRight) {
-    feedback.value = isRetry
-      ? { kind: 'ok', text: '这次答对了！', manual: true }
-      : { kind: 'ok', text: '答对了！', manual: false }
-    if (!isRetry) scheduleAutoNext()
+    // 与打字模式一致：答对后按设置自动进入下一题（选择题不区分同义词）
+    feedback.value = { kind: 'ok', text: isRetry ? '这次答对了！' : '答对了！', manual: false }
+    scheduleAutoNext()
+    if (isRetry) s.retrying = false // 答对即结束重做：选项重新禁用、回车进入下一题
   } else {
+    // 与打字模式一致：答错不提供「下一题」，必须重选到正确
     feedback.value = {
       kind: 'no',
       text: '正确答案：',
       strong: answerText.value,
-      manual: true,
+      manual: false,
       note: isRetry ? '再选一次？' : '已加入错题库',
       appealable: !isRetry,
       retryHint: true
@@ -332,10 +342,11 @@ export function selfAssess(kind) {
   }
 }
 
-/** 重做本题：清空作答、恢复输入，但不撤销已经记录的判题结果 */
+/** 重做本题：清空作答、恢复输入，但不撤销已经记录的判题结果。
+ *  注意不要再拦 s.retrying —— 重做又答错时要能再次清空重来。 */
 export function startRetry() {
   const s = session.value
-  if (!s || !s.answered || s.retrying) return
+  if (!s || !s.answered) return
   cancelAutoNext()
   s.retrying = true
   s.picked = null
@@ -359,12 +370,28 @@ export function nextQuestion() {
   if (!isFinished.value) prepareQuestion()
 }
 
-/** 回车键的统一行为：未作答=提交；答错=重做；其余=下一题 */
+/** 回车键的统一行为
+ *    未作答             → 提交判题
+ *    重做中（已清空）    → 打字模式提交判题；选择题要重新选择，回车不跳题
+ *    重做又答错         → 再清空一次，继续重做
+ *    其余（重做答对 / 申诉后）→ 进入下一题
+ */
 export function handleEnter(typedText) {
   const s = session.value
   if (!s) return
   if (!s.answered) { submitTyped(typedText); return }
   if (s.style === 'flash') { nextQuestion(); return }
+
+  if (s.retrying) {
+    if (!feedback.value) {
+      if (s.style === 'type') submitTyped(typedText)
+      return
+    }
+    if (feedback.value.kind === 'no') { startRetry(); return }
+    nextQuestion()
+    return
+  }
+
   if (feedback.value && feedback.value.kind === 'no') { startRetry(); return }
   nextQuestion()
 }

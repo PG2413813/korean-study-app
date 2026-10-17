@@ -248,7 +248,7 @@ const modeLabel = computed(() => {
       <!-- 操作条：答错时回车重做；申诉后回车下一题 -->
       <div class="toolbar" style="justify-content:center;margin-top:12px">
         <span v-if="feedback && feedback.retryHint" class="tip" style="margin:0">
-          按回车重新作答，或
+          按回车重新作答（答对才能进入下一题），或
         </span>
         <span v-else-if="feedback && feedback.appealed" class="tip" style="margin:0">
           按回车进入下一题，或
